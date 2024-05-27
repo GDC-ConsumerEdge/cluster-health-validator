@@ -13,7 +13,7 @@ class CheckRootSyncs:
 
         # Expect at least 1 root sync object!
         if (len(resp.get("items")) < 1):
-            log.error(f'Found {len(resp.items)} rootsyncs but expected 1 or more.')
+            log.error(f'Found {len(resp.get("items"))} rootsyncs but expected 1 or more.')
             return failedCheck
         
         # Assert that each root sync is synced and completed reconciling

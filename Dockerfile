@@ -2,11 +2,9 @@ FROM python:3.12-alpine
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+COPY app /app
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-COPY . .
+EXPOSE 8080
 
-EXPOSE 5000
-
-CMD ["gunicorn", "-b" "0.0.0.0:5000", "app:app"]
+CMD [ "gunicorn", "-b", "0.0.0.0:8080", "app:app" ]

@@ -12,7 +12,7 @@ class CheckVirtualMachines:
 
         # Expect multiple virtualmachines
         if (len(resp.get("items")) < 2):
-            log.error(f'Found {len(resp.items)} virtualmachines but expected 2 or more.')
+            log.error(f'Found {len(resp.get("items"))} virtualmachines but expected 2 or more.')
             return failedCheck
         
         # Assert that each virtualmachine is ready

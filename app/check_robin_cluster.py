@@ -11,7 +11,7 @@ class CheckRobinCluster:
         failedCheck = False
 
         if (len(resp.get("items")) != 1):
-            log.error(f'Found {len(resp.items)} robinclusters but wanted 1.')
+            log.error(f'Found {len(resp.get("items"))} robinclusters but wanted 1.')
             return failedCheck
         
         # Assert that the overall robincluster status is Ready

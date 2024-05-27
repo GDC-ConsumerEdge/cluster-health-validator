@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-health-validator
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-health-validator
+  template:
+    metadata:
+      labels:
+        app: cluster-health-validator
+    spec:
+      serviceAccountName: cluster-health-validator
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: image-pull-secret
+      containers:
+      - name: cluster-health-validator
+        image: us-docker.pkg.dev/cloud-alchemists-sandbox/kamek/cluster-health-validator:0.0.1
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        ports:
+        - containerPort: 8080
+          name: gunicorn
+        env:
+        - name: LOG_LEVEL
+          value: INFO
+      livenessProbe:
+        tcpSocket:
+          port: 8080
+        initialDelaySeconds: 5
+        periodSeconds: 60
+      readinessProbe:
+        tcpSocket:
+          port: 8080
+        initialDelaySeconds: 5
+        periodSeconds: 60
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-health-validator
+  namespace: default
+spec:
+  selector:
+    app: cluster-health-validator
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: gunicorn

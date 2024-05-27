@@ -12,7 +12,7 @@ class CheckDataVolumes:
 
         # Expect multiple datavolumes
         if (len(resp.get("items")) < 2):
-            log.error(f'Found {len(resp.items)} rootsyncs but expected 1 or more.')
+            log.error(f'Found {len(resp.get("items"))} datavolumes but expected 2 or more.')
             return failedCheck
         
         # Assert that each data volume is 100% imported and ready

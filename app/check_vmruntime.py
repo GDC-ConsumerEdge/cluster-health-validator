@@ -11,7 +11,7 @@ class CheckVMRuntime:
         failedCheck = False
 
         if (len(resp.get("items")) != 1):
-            log.error(f'Found {len(resp.items)} vmruntime but wanted 1.')
+            log.error(f'Found {len(resp.get("items"))} vmruntime but wanted 1.')
             return failedCheck
         
         # Assert that the overall vmruntime status is Ready
