@@ -8,8 +8,6 @@ class CheckNode:
         k8s = client.CoreV1Api()
         resp = k8s.list_node()
 
-        failedCheck = False
-
         for node in resp.items:
             nodeReady = False
             for condition in node.status.conditions:
@@ -18,7 +16,7 @@ class CheckNode:
 
             if (not nodeReady):
                 log.error(f"Node {node.metadata.name} is not ready.")
-                failedCheck = True
+                return False
 
         log.info("Check node passed")
-        return not failedCheck
+        return True

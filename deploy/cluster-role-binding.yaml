@@ -13,6 +13,7 @@ rules:
   - validator.gdc.gke.io
   resources:
   - healthchecks
+  - healthchecks/status
   verbs:
   - create
   - delete
