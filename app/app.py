@@ -43,6 +43,7 @@ def create_health_check_cr():
 
 
 def run_checks():
+    global health_check_cr
     if not health_check_cr:
         health_check_cr = HealthCheck()
 
