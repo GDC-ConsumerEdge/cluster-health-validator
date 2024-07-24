@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, abort
 from apscheduler.schedulers.background import BackgroundScheduler
 from kubernetes import config
 from kubernetes.client.exceptions import ApiException
@@ -6,6 +6,7 @@ from prometheus_client import generate_latest, Gauge
 import logging
 import os
 import concurrent.futures
+import requests
 
 from check_data_volumes import CheckDataVolumes
 from check_robin_cluster import CheckRobinCluster
@@ -23,12 +24,22 @@ platform_health_metric = Gauge('platform_health', 'Platform Checks')
 workload_health_metric = Gauge('workload_health', 'Workload Checks')
 
 _MAX_WORKERS = os.environ.get('MAX_WORKERS', 10)
-
+_ROBIN_MASTER_SVC_ENDPOINT = 'robin-master.robinio.svc.cluster.local'
+_ROBIN_MASTER_SVC_METRICS_PORT = 29446
 
 @app.route('/metrics')
 def metrics():
     return generate_latest()
 
+@app.route('/robin_metrics')
+def robin_metrics():
+    """Queries and returns robin metrics available from the robin-master service.
+        This endpoint serves up robin metrics on an http endpoint, which allows
+        prometheus scraping from stackdriver.
+    """
+    url = 'https://%s:%i/metrics' % (_ROBIN_MASTER_SVC_ENDPOINT, _ROBIN_MASTER_SVC_METRICS_PORT)
+    response = requests.get(url, verify=False)
+    return response.text
 
 def create_health_check_cr():
     """To create health check resource. It is invoked for each healthcheck
@@ -111,3 +122,13 @@ health_check_cr = create_health_check_cr()
 scheduler = BackgroundScheduler(daemon=True)
 scheduler.add_job(run_checks, 'interval', minutes=1)
 scheduler.start()
+
+@app.route('/health')
+def health():
+    """health endpoint that confirms the health check scheduler is running"""
+
+    # 0 == stopped, 1 == running, 2 == paused
+    if scheduler.state == 1:
+        return "Ok"
+    else:
+        abort(500, "Scheduler not running")
