@@ -27,12 +27,16 @@ _MAX_WORKERS = os.environ.get("MAX_WORKERS", 10)
 _ROBIN_MASTER_SVC_ENDPOINT = "robin-master.robinio.svc.cluster.local"
 _ROBIN_MASTER_SVC_METRICS_PORT = 29446
 
-
 @app.route("/metrics")
 def metrics():
     """Prometheus metrics endpoint for workload and platform checks"""
     return generate_latest()
 
+
+# requests is used only to query the robin metrics endpoint to proxy metrics
+# Since robin uses a self-signed cert, disabling warning to avoid
+#   `InsecureRequestWarning: Unverified HTTPS request is being made to host` errors
+requests.packages.urllib3.disable_warnings()
 
 @app.route("/robin_metrics")
 def robin_metrics():
