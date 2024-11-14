@@ -1,0 +1,11 @@
+platform_checks:
+- name: Node Health
+  module: CheckNodes
+- name: Robin Cluster Health
+  module: CheckRobinCluster
+- name: Root Sync Check
+  module: CheckRootSyncs
+- name: VMRuntime Check
+  module: CheckVMRuntime
+
+workload_checks: []

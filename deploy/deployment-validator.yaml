@@ -1,3 +1,34 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: health-check-config
+  namespace: default
+data:
+  config.yaml: |
+    platform_checks:
+    - name: Node Health
+      module: CheckNodes
+    - name: Robin Cluster Health
+      module: CheckRobinCluster
+    - name: Root Sync Check
+      module: CheckRootSyncs
+    - name: VMRuntime Check
+      module: CheckVMRuntime
+
+    workload_checks:
+    - name: VM Workloads Health
+      module: CheckVirtualMachines
+      parameters:
+        namespace: vm-workloads
+        count: 4
+    - name: VM Data Volume Health
+      module: CheckDataVolumes
+      parameters:
+        namespace: vm-workloads
+        count: 4
+
+---
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,7 +53,7 @@ spec:
         - name: image-pull-secret
       containers:
       - name: cluster-health-validator
-        image: gcr.io/cloud-alchemists-sandbox/kamek/cluster-health-validator:0.0.6
+        image: gcr.io/cloud-alchemists-sandbox/kamek/cluster-health-validator:1.1.0
         resources:
           requests:
             cpu: 100m
@@ -33,6 +64,8 @@ spec:
         env:
         - name: LOG_LEVEL
           value: INFO
+        - name: APP_CONFIG_PATH
+          value: /config/config.yaml
         livenessProbe:
           httpGet:
             path: /health
@@ -45,6 +78,13 @@ spec:
             port: 8080
           initialDelaySeconds: 15
           periodSeconds: 15
+        volumeMounts:
+        - name: config
+          mountPath: /config
+      volumes:
+      - name: config
+        configMap:
+          name: health-check-config
 
 ---
 apiVersion: v1

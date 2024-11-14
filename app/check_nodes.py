@@ -1,9 +1,9 @@
 from kubernetes import client
 import logging
 
-log = logging.getLogger('check.node')
+log = logging.getLogger('check.nodes')
 
-class CheckNode:
+class CheckNodes:
     def is_healthy(self):
         k8s = client.CoreV1Api()
         resp = k8s.list_node()
@@ -18,5 +18,5 @@ class CheckNode:
                 log.error(f"Node {node.metadata.name} is not ready.")
                 return False
 
-        log.info("Check node passed")
+        log.info("Check nodes passed")
         return True

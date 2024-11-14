@@ -5,7 +5,7 @@ import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers import base
 from check_data_volumes import CheckDataVolumes
-from check_node import CheckNode
+from check_nodes import CheckNodes
 from check_robin_cluster import CheckRobinCluster
 from check_root_syncs import CheckRootSyncs
 from check_virtual_machines import CheckVirtualMachines
@@ -15,6 +15,7 @@ from health_checks import HealthCheck
 from kubernetes import config
 from kubernetes.client.exceptions import ApiException
 from prometheus_client import Gauge, generate_latest
+from config import read_config
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper())
 
@@ -26,6 +27,15 @@ workload_health_metric = Gauge("workload_health", "Workload Checks")
 _MAX_WORKERS = os.environ.get("MAX_WORKERS", 10)
 _ROBIN_MASTER_SVC_ENDPOINT = "robin-master.robinio.svc.cluster.local"
 _ROBIN_MASTER_SVC_METRICS_PORT = 29446
+
+health_check_map = {
+    CheckNodes.__name__: CheckNodes,
+    CheckRobinCluster.__name__: CheckRobinCluster,
+    CheckRootSyncs.__name__: CheckRootSyncs,
+    CheckVMRuntime.__name__: CheckVMRuntime,
+    CheckDataVolumes.__name__: CheckDataVolumes,
+    CheckVirtualMachines.__name__: CheckVirtualMachines,
+}
 
 @app.route("/metrics")
 def metrics():
@@ -66,16 +76,25 @@ def run_checks():
     if not health_check_cr:
         health_check_cr = HealthCheck()
 
-    platform_checks = [
-        CheckNode(),
-        CheckRobinCluster(),
-        CheckRootSyncs(),
-        CheckVMRuntime(),
-    ]
-    workload_checks = [
-        CheckDataVolumes(),
-        CheckVirtualMachines(),
-    ]
+    platform_checks = []
+    workload_checks = []
+
+    config = read_config()
+
+    for check in config.platform_checks:
+        if ("parameters" in check):
+            platform_checks.append(health_check_map[check["module"]](check["parameters"]))
+        else:
+            platform_checks.append(health_check_map[check["module"]]())
+
+
+    for check in config.workload_checks:
+        if ("parameters" in check):
+            workload_checks.append(health_check_map[check["module"]](check["parameters"]))
+        else:
+            workload_checks.append(health_check_map[check["module"]]())
+
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as executor:
         platform_checks_futures = {
             executor.submit(check.is_healthy): check.__class__.__name__

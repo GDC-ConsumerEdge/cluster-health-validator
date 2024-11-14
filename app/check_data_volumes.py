@@ -1,16 +1,26 @@
 from kubernetes import client
+from pydantic import BaseModel
 import logging
 
 log = logging.getLogger('check.datavolumes')
 
+class CheckDataVolumesParameters(BaseModel):
+    namespace: str
+    count: int
+
 class CheckDataVolumes:
+    def __init__(self, parameters: dict) -> None:
+        params = CheckDataVolumesParameters(**parameters)
+
+        self.namespace = params.namespace
+        self.count = params.count
+
     def is_healthy(self):
         k8s = client.CustomObjectsApi()
-        resp = k8s.list_namespaced_custom_object(group="cdi.kubevirt.io", version="v1beta1", plural="datavolumes", namespace="vm-workloads")
+        resp = k8s.list_namespaced_custom_object(group="cdi.kubevirt.io", version="v1beta1", plural="datavolumes", namespace=self.namespace)
 
-        # Expect multiple datavolumes
-        if (len(resp.get("items")) < 2):
-            log.error(f'Found {len(resp.get("items"))} datavolumes but expected 2 or more.')
+        if (len(resp.get("items")) != self.count):
+            log.error(f'Found {len(resp.get("items"))} datavolumes but expected {self.count}.')
             return False
         
         # Assert that each data volume is 100% imported and ready
