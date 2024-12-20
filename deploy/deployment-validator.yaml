@@ -8,6 +8,8 @@ data:
     platform_checks:
     - name: Node Health
       module: CheckNodes
+    - name: Check Google Group RBAC
+      module: CheckGoogleGroupRBAC
     - name: Robin Cluster Health
       module: CheckRobinCluster
     - name: Root Sync Check

@@ -74,6 +74,7 @@ Below details the health check modules available as part of the solution, with s
 | Module               | Description                                                            | Parameters                                                           |
 |----------------------|------------------------------------------------------------------------|----------------------------------------------------------------------|
 | CheckNodes           | Checks Kubernetes Node Health                                          |                                                                      |
+| CheckGoogleGroupRBAC | Checks that Google Group RBAC has been enabled                         |                                                                      |
 | CheckRobinCluster    | Checks RobinCluster Health                                             |                                                                      |
 | CheckRootSyncs       | Checks that RootSyncs are synced and have completed reconciling        |                                                                      |
 | CheckVMRuntime       | Checks that VMruntime is Ready, without any preflight failure          |                                                                      |

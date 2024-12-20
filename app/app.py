@@ -6,6 +6,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers import base
 from check_data_volumes import CheckDataVolumes
 from check_nodes import CheckNodes
+from check_google_group_rbac import CheckGoogleGroupRBAC
 from check_robin_cluster import CheckRobinCluster
 from check_root_syncs import CheckRootSyncs
 from check_virtual_machines import CheckVirtualMachines
@@ -29,6 +30,7 @@ _ROBIN_MASTER_SVC_ENDPOINT = "robin-master.robinio.svc.cluster.local"
 _ROBIN_MASTER_SVC_METRICS_PORT = 29446
 
 health_check_map = {
+    CheckGoogleGroupRBAC.__name__: CheckGoogleGroupRBAC,
     CheckNodes.__name__: CheckNodes,
     CheckRobinCluster.__name__: CheckRobinCluster,
     CheckRootSyncs.__name__: CheckRootSyncs,
