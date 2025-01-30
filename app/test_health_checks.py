@@ -1,28 +1,30 @@
-from unittest.mock import patch
-from kubernetes.client.rest import ApiException
 import time
 import unittest
+from unittest.mock import patch
 
 from health_checks import HealthCheck
+from kubernetes.client.rest import ApiException
 
 
 class TestHealthCheck(unittest.TestCase):
 
     def setUp(self) -> None:
         self.crd_read_patcher = patch(
-            'kubernetes.client.ApiextensionsV1Api.read_custom_resource_definition'
+            "kubernetes.client.ApiextensionsV1Api.read_custom_resource_definition"
         )
         self.crd_create_patcher = patch(
-            'kubernetes.client.ApiextensionsV1Api.create_custom_resource_definition'
+            "kubernetes.client.ApiextensionsV1Api.create_custom_resource_definition"
         )
         self.custom_get_patcher = patch(
-            'kubernetes.client.CustomObjectsApi.get_cluster_custom_object')
-        self.custom_create_patcher = patch(
-            'kubernetes.client.CustomObjectsApi.create_cluster_custom_object')
-        self.custom_patch_patcher = patch(
-            'kubernetes.client.CustomObjectsApi.patch_cluster_custom_object_status'
+            "kubernetes.client.CustomObjectsApi.get_cluster_custom_object"
         )
-        self.load_config_patcher = patch('kubernetes.config.load_config')
+        self.custom_create_patcher = patch(
+            "kubernetes.client.CustomObjectsApi.create_cluster_custom_object"
+        )
+        self.custom_patch_patcher = patch(
+            "kubernetes.client.CustomObjectsApi.patch_cluster_custom_object_status"
+        )
+        self.load_config_patcher = patch("kubernetes.config.load_config")
         self.crd_read = self.crd_read_patcher.start()
         self.crd_create = self.crd_create_patcher.start()
         self.custom_get = self.custom_get_patcher.start()
@@ -81,8 +83,10 @@ class TestHealthCheck(unittest.TestCase):
         lastTransitionTime = condition.lastTransitionTime
         self.hc.update_condition(condition, failed_checks)
         self.assertEqual(
-            condition.lastTransitionTime, lastTransitionTime,
-            "lastTransitionTime should not change if the condition is same")
+            condition.lastTransitionTime,
+            lastTransitionTime,
+            "lastTransitionTime should not change if the condition is same",
+        )
 
         # Condition with passed checks
         failed_checks = []
@@ -93,8 +97,10 @@ class TestHealthCheck(unittest.TestCase):
         self.assertEqual(condition.reason, "HealthChecksPassed")
         self.assertEqual(condition.message, "")
         self.assertNotEqual(
-            condition.lastTransitionTime, lastTransitionTime,
-            "lastTransitionTime should change if the condition is different")
+            condition.lastTransitionTime,
+            lastTransitionTime,
+            "lastTransitionTime should change if the condition is different",
+        )
 
     def test_update_status(self):
         failed_checks = ["Check1", "Check2"]
@@ -128,45 +134,61 @@ class TestHealthCheck(unittest.TestCase):
         self.assertEqual(
             expected_condition_platform_no_failedchecks,
             HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][0]))
+                **kwargs["body"]["status"]["conditions"][0]
+            ),
+        )
         self.assertEqual(
             expected_condition_workloads_no_failedchecks,
             HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][1]))
+                **kwargs["body"]["status"]["conditions"][1]
+            ),
+        )
 
         self.hc.update_status([], failed_checks)
         _, kwargs = self.custom_patch.call_args
         self.assertEqual(
             expected_condition_platform_no_failedchecks,
             HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][0]))
+                **kwargs["body"]["status"]["conditions"][0]
+            ),
+        )
         self.assertEqual(
             expected_condition_workloads_failedchecks,
             HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][1]))
+                **kwargs["body"]["status"]["conditions"][1]
+            ),
+        )
 
         self.hc.update_status(failed_checks, [])
         _, kwargs = self.custom_patch.call_args
         self.assertEqual(
             expected_condition_platform_failedchecks,
             HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][0]))
+                **kwargs["body"]["status"]["conditions"][0]
+            ),
+        )
         self.assertEqual(
             expected_condition_workloads_no_failedchecks,
             HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][1]))
+                **kwargs["body"]["status"]["conditions"][1]
+            ),
+        )
 
         self.hc.update_status(failed_checks, failed_checks)
         _, kwargs = self.custom_patch.call_args
         self.assertEqual(
             expected_condition_platform_failedchecks,
             HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][0]))
+                **kwargs["body"]["status"]["conditions"][0]
+            ),
+        )
         self.assertEqual(
             expected_condition_workloads_failedchecks,
             HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][1]))
+                **kwargs["body"]["status"]["conditions"][1]
+            ),
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

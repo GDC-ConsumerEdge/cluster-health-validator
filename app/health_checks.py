@@ -1,12 +1,14 @@
 """Exposes HealthCheck CR on k8s for GDCC cluster health validator."""
-from dataclasses import dataclass, asdict, field
-from datetime import datetime
-from kubernetes import config, client
-from kubernetes.client.exceptions import ApiException
-from os import path
-from typing import List, Dict, Any
+
 import time
+from dataclasses import asdict, dataclass, field
+from datetime import datetime
+from os import path
+from typing import Any, Dict, List
+
 import yaml
+from kubernetes import client, config
+from kubernetes.client.exceptions import ApiException
 
 _CRD_FILE_PATH = path.join(path.dirname(__file__), "healthchecks.crd.yaml")
 _DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
@@ -14,22 +16,24 @@ _DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 class HealthCheck:
     """Class for GDCC cluster health checks"""
+
     group = "validator.gdc.gke.io"
     version = "v1"
     kind = "HealthCheck"
     plural = "healthchecks"
     name = "default"
     meta = {
-        "apiVersion": f'{group}/{version}',
+        "apiVersion": f"{group}/{version}",
         "kind": kind,
         "metadata": {
             "name": name,
-        }
+        },
     }
 
     @dataclass
     class HealthCheckCondition:
         """Class for HealthCheck conditions"""
+
         type: str
         message: str
         reason: str
@@ -72,13 +76,17 @@ class HealthCheck:
             # Load the current conditions if present
             health_check_resource = self.get()
             # ignore initializing if we cannot fetch two conditions
-            if "status" in health_check_resource and "conditions" in health_check_resource[
-                    "status"] and len(
-                        health_check_resource["status"]["conditions"]) == 2:
+            if (
+                "status" in health_check_resource
+                and "conditions" in health_check_resource["status"]
+                and len(health_check_resource["status"]["conditions"]) == 2
+            ):
                 self.condition_platform = self.HealthCheckCondition(
-                    **health_check_resource["status"]["conditions"][0])
+                    **health_check_resource["status"]["conditions"][0]
+                )
                 self.condition_workloads = self.HealthCheckCondition(
-                    **health_check_resource["status"]["conditions"][1])
+                    **health_check_resource["status"]["conditions"][1]
+                )
 
     def install_crd(self):
         """Install custom resource definition."""
@@ -92,7 +100,8 @@ class HealthCheck:
         """Check if healtcheckcustom resource definition is installed."""
         try:
             self.crd_api.read_custom_resource_definition(
-                name=f'{self.plural}.{self.group}')
+                name=f"{self.plural}.{self.group}"
+            )
         except ApiException as e:
             if e.status == 404:
                 return False
@@ -147,8 +156,9 @@ class HealthCheck:
             name=self.name,
         )
 
-    def update_condition(self, condition: HealthCheckCondition,
-                         failed_checks: List[str]) -> None:
+    def update_condition(
+        self, condition: HealthCheckCondition, failed_checks: List[str]
+    ) -> None:
         """Updates HealthCheckCondition fields.
         Args:
             condition: HealthCheck condition platform or workload

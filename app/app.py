@@ -1,22 +1,23 @@
 import concurrent.futures
 import logging
 import os
+
 import requests
-from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers import base
+from apscheduler.schedulers.background import BackgroundScheduler
 from check_data_volumes import CheckDataVolumes
-from check_nodes import CheckNodes
 from check_google_group_rbac import CheckGoogleGroupRBAC
+from check_nodes import CheckNodes
 from check_robin_cluster import CheckRobinCluster
 from check_root_syncs import CheckRootSyncs
 from check_virtual_machines import CheckVirtualMachines
 from check_vmruntime import CheckVMRuntime
+from config import read_config
 from flask import Flask, abort
 from health_checks import HealthCheck
 from kubernetes import config
 from kubernetes.client.exceptions import ApiException
 from prometheus_client import Gauge, generate_latest
-from config import read_config
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper())
 
@@ -39,6 +40,7 @@ health_check_map = {
     CheckVirtualMachines.__name__: CheckVirtualMachines,
 }
 
+
 @app.route("/metrics")
 def metrics():
     """Prometheus metrics endpoint for workload and platform checks"""
@@ -50,13 +52,16 @@ def metrics():
 #   `InsecureRequestWarning: Unverified HTTPS request is being made to host` errors
 requests.packages.urllib3.disable_warnings()
 
+
 @app.route("/robin_metrics")
 def robin_metrics():
     """Queries and returns robin metrics available from the robin-master service.
     This endpoint serves up robin metrics on an http endpoint, which allows
     prometheus scraping from stackdriver.
     """
-    url = f"https://{_ROBIN_MASTER_SVC_ENDPOINT}:{_ROBIN_MASTER_SVC_METRICS_PORT}/metrics"
+    url = (
+        f"https://{_ROBIN_MASTER_SVC_ENDPOINT}:{_ROBIN_MASTER_SVC_METRICS_PORT}/metrics"
+    )
     response = requests.get(url, verify=False, timeout=10)
     return response.text
 
@@ -67,7 +72,7 @@ def create_health_check_cr():
     later which makes the CR creation fail."""
     try:
         return HealthCheck()
-    except Exception: # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         logging.error("Failed to setup healthcheck CR", exc_info=True)
         logging.error("Health status will not updated in k8s CR")
     return None
@@ -81,21 +86,23 @@ def run_checks():
     platform_checks = []
     workload_checks = []
 
-    config = read_config()
+    app_config = read_config()
 
-    for check in config.platform_checks:
-        if ("parameters" in check):
-            platform_checks.append(health_check_map[check["module"]](check["parameters"]))
+    for check in app_config.platform_checks:
+        if "parameters" in check:
+            platform_checks.append(
+                health_check_map[check["module"]](check["parameters"])
+            )
         else:
             platform_checks.append(health_check_map[check["module"]]())
 
-
-    for check in config.workload_checks:
-        if ("parameters" in check):
-            workload_checks.append(health_check_map[check["module"]](check["parameters"]))
+    for check in app_config.workload_checks:
+        if "parameters" in check:
+            workload_checks.append(
+                health_check_map[check["module"]](check["parameters"])
+            )
         else:
             workload_checks.append(health_check_map[check["module"]]())
-
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as executor:
         platform_checks_futures = {
@@ -158,7 +165,7 @@ def health():
     """health endpoint that confirms the health check scheduler is running"""
 
     # 0 == stopped, 1 == running, 2 == paused
-    if scheduler.state == base.STATE_RUNNING:
-        return "Ok"
-    else:
+    if scheduler.state != base.STATE_RUNNING:
         abort(500, "Scheduler not running")
+
+    return "Ok"
