@@ -1,8 +1,9 @@
 import os
-from typing import NotRequired, Optional
+from typing import NotRequired
+
 import yaml
-from typing_extensions import TypedDict
 from pydantic import BaseModel
+from typing_extensions import TypedDict
 
 """
 Example health check configuration
@@ -20,16 +21,19 @@ workload_checks:
     namespace: vm-workloads
 """
 
+
 class HealthCheck(TypedDict):
     name: str
     module: str
     parameters: NotRequired[dict] = {}
 
+
 class Config(BaseModel):
     platform_checks: list[HealthCheck]
     workload_checks: list[HealthCheck]
 
+
 def read_config():
-    with open(os.environ.get('APP_CONFIG_PATH', '/config/config.yaml')) as stream:
+    with open(os.environ.get("APP_CONFIG_PATH", "/config/config.yaml")) as stream:
         config = yaml.safe_load(stream)
     return Config(**config)
