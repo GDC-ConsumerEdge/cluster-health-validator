@@ -10,6 +10,7 @@ resources:
 configMapGenerator:
   - name: health-check-config
     options:
+      disableNameSuffixHash: true
       labels:
         generated-by-kustomize: "true"
     files:
