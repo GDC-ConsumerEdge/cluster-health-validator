@@ -219,6 +219,7 @@ spec:
       annotations:
         prometheus.io/path: /metrics
         prometheus.io/port: "8080"
+        prometheus.io/scrape: "true"
       labels:
         app: cluster-health-validator
     spec:
@@ -252,9 +253,7 @@ spec:
         volumeMounts:
         - mountPath: /config
           name: config
-      imagePullSecrets:
-      - name: image-pull-secret
-      restartPolicy: Always
+      restartPolicy: IfNotPresent
       serviceAccountName: cluster-health-validator
       volumes:
       - configMap:

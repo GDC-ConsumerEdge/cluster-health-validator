@@ -12,13 +12,12 @@ spec:
       labels:
         app: cluster-health-validator
       annotations:
+        prometheus.io/scrape: "true"
         prometheus.io/path: /metrics
         prometheus.io/port: "8080"
     spec:
       serviceAccountName: cluster-health-validator
-      restartPolicy: Always
-      imagePullSecrets:
-        - name: image-pull-secret
+      restartPolicy: IfNotPresent
       containers:
         - name: cluster-health-validator
           image: ghcr.io/gdc-consumeredge/cluster-health-validator/cluster-health-validator
