@@ -159,7 +159,7 @@ kind: ConfigMap
 metadata:
   labels:
     generated-by-kustomize: "true"
-  name: health-check-config-5d878kg67f
+  name: health-check-config
   namespace: gdc-cluster-health
 ---
 apiVersion: v1
@@ -245,5 +245,5 @@ spec:
       serviceAccountName: cluster-health-validator
       volumes:
       - configMap:
-          name: health-check-config-5d878kg67f
+          name: health-check-config
         name: config
