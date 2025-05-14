@@ -154,11 +154,12 @@ data:
         module: CheckRootSyncs
       - name: VMRuntime Check
         module: CheckVMRuntime
+    workload_checks: []
 kind: ConfigMap
 metadata:
   labels:
     generated-by-kustomize: "true"
-  name: health-check-config-gdbkhkg86b
+  name: health-check-config-5d878kg67f
   namespace: gdc-cluster-health
 ---
 apiVersion: v1
@@ -244,5 +245,5 @@ spec:
       serviceAccountName: cluster-health-validator
       volumes:
       - configMap:
-          name: health-check-config-gdbkhkg86b
+          name: health-check-config-5d878kg67f
         name: config

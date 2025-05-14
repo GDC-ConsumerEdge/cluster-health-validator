@@ -8,3 +8,4 @@ platform_checks:
     module: CheckRootSyncs
   - name: VMRuntime Check
     module: CheckVMRuntime
+workload_checks: []
