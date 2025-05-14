@@ -5,10 +5,19 @@ kind: Kustomization
 namespace: gdc-cluster-health
 
 resources:
-- cluster-role-binding.yaml
-- deployment-validator.yaml
-- healthchecks.crd.yaml
+  - cluster-role-binding.yaml
+  - deployment-validator.yaml
+  - healthchecks.crd.yaml
+
+configMapGenerator:
+  - name: health-check-config
+    options:
+      disableNameSuffixHash: true
+      labels:
+        generated-by-kustomize: "true"
+    files:
+      - config.yaml
 
 images:
-- name: gcr.io/cloud-alchemists-sandbox/kamek/cluster-health-validator
-  newTag: 1.1.0
+  - name: gcr.io/cloud-alchemists-sandbox/kamek/cluster-health-validator
+    newTag: 1.1.0

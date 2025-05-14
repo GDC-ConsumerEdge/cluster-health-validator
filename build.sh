@@ -94,15 +94,14 @@ create_registry_url
 echo "Building ${IMAGE_URL}:${VERSION}..."
 
 build_container
-# Add question if releasing
 
 # Confirm the release intention
-echo "Do you want to release v${new_version}? (y/n)"
+echo "Do you want to release/push ${IMAGE_URL}:v${new_version}? (y/n)"
 read -r response
 
 case "$response" in
     [yY][eE][sS]|[yY]|[yY][aA])
-        echo "Releasing ${IMAGE_URL} v${new_version}..."
+        echo "Releasing ${IMAGE_URL}:v${new_version}..."
         release_container
         ;;
     *)

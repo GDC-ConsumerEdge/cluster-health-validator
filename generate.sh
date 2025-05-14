@@ -37,3 +37,6 @@ else
     echo "Building overlay: $SPECIFIC_OVERLAY"
     kustomize build overlays/$SPECIFIC_OVERLAY > config/$SPECIFIC_OVERLAY/$SPECIFIC_OVERLAY-generated.yaml
 fi
+
+echo "Verifying configuration with Nomos"
+nomos vet --no-api-server-check --source-format unstructured --path config/

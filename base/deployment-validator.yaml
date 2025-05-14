@@ -1,39 +1,7 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: health-check-config
-data:
-  config.yaml: |
-    platform_checks:
-    - name: Node Health
-      module: CheckNodes
-    - name: Check Google Group RBAC
-      module: CheckGoogleGroupRBAC
-    - name: Robin Cluster Health
-      module: CheckRobinCluster
-    - name: Root Sync Check
-      module: CheckRootSyncs
-    - name: VMRuntime Check
-      module: CheckVMRuntime
-
-    workload_checks:
-    - name: VM Workloads Health
-      module: CheckVirtualMachines
-      parameters:
-        namespace: vm-workloads
-        count: 4
-    - name: VM Data Volume Health
-      module: CheckDataVolumes
-      parameters:
-        namespace: vm-workloads
-        count: 4
-
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cluster-health-validator
-  namespace: default
 spec:
   replicas: 1
   selector:
@@ -91,7 +59,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: cluster-health-validator
-  namespace: default
 spec:
   selector:
     app: cluster-health-validator
