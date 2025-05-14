@@ -10,5 +10,5 @@ resources:
   - healthchecks.crd.yaml
 
 images:
-  - name: gcr.io/cloud-alchemists-sandbox/kamek/cluster-health-validator
-    newTag: 1.1.0
+  - name: ghcr.io/gdc-consumeredge/cluster-health-validator/cluster-health-validator
+    newTag: 1.1.3

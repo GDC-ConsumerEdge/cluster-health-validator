@@ -228,7 +228,7 @@ spec:
           value: INFO
         - name: APP_CONFIG_PATH
           value: /config/config.yaml
-        image: gcr.io/cloud-alchemists-sandbox/kamek/cluster-health-validator:1.1.0
+        image: ghcr.io/gdc-consumeredge/cluster-health-validator/cluster-health-validator:1.1.3
         livenessProbe:
           httpGet:
             path: /health

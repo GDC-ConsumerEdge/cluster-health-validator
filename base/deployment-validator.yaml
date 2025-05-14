@@ -21,7 +21,7 @@ spec:
         - name: image-pull-secret
       containers:
         - name: cluster-health-validator
-          image: gcr.io/cloud-alchemists-sandbox/kamek/cluster-health-validator:1.1.0
+          image: ghcr.io/gdc-consumeredge/cluster-health-validator/cluster-health-validator
           resources:
             requests:
               cpu: 100m
