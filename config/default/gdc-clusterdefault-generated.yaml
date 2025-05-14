@@ -1,0 +1,260 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: healthchecks.validator.gdc.gke.io
+spec:
+  conversion:
+    strategy: None
+  group: validator.gdc.gke.io
+  names:
+    kind: HealthCheck
+    listKind: HealthCheckList
+    plural: healthchecks
+    singular: healthcheck
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=='PlatformHealthy')].reason
+      name: platform_checks
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='WorkloadsHealthy')].reason
+      name: workload_checks
+      type: string
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: Healthcheck is the Schema for the healthchecks API
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: HealthcheckSpec defines the desired state of Healthcheck
+            properties:
+              enabled:
+                description: Healthchecks are enabled. Notused currently
+                type: boolean
+            type: object
+          status:
+            description: HealthcheckStatus defines the observed state of Healthcheck
+            properties:
+              conditions:
+                description: conditions represents the latest available observations
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      nullable: true
+                      type: string
+                    lastUpdateTime:
+                      description: The last time this condition was updated.
+                      format: date-time
+                      nullable: true
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      enum:
+                      - HealthChecksPassed
+                      - HealthChecksFailed
+                      - Pending
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition.
+                      enum:
+                      - PlatformHealthy
+                      - WorkloadsHealthy
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-health-validator
+  namespace: gdc-cluster-health
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-health-validator
+rules:
+- apiGroups:
+  - validator.gdc.gke.io
+  resources:
+  - healthchecks
+  - healthchecks/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-health-validator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-health-validator
+subjects:
+- kind: ServiceAccount
+  name: cluster-health-validator
+  namespace: gdc-cluster-health
+---
+apiVersion: v1
+data:
+  config.yaml: |
+    platform_checks:
+    - name: Node Health
+      module: CheckNodes
+    - name: Check Google Group RBAC
+      module: CheckGoogleGroupRBAC
+    - name: Robin Cluster Health
+      module: CheckRobinCluster
+    - name: Root Sync Check
+      module: CheckRootSyncs
+    - name: VMRuntime Check
+      module: CheckVMRuntime
+
+    workload_checks:
+    - name: VM Workloads Health
+      module: CheckVirtualMachines
+      parameters:
+        namespace: vm-workloads
+        count: 4
+    - name: VM Data Volume Health
+      module: CheckDataVolumes
+      parameters:
+        namespace: vm-workloads
+        count: 4
+kind: ConfigMap
+metadata:
+  name: health-check-config
+  namespace: gdc-cluster-health
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-health-validator
+  namespace: gdc-cluster-health
+spec:
+  ports:
+  - name: gunicorn
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: cluster-health-validator
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/path: /robin_metrics
+    prometheus.io/port: "8080"
+    prometheus.io/scrape: "true"
+  name: robin-metric-scraper
+  namespace: gdc-cluster-health
+spec:
+  ports:
+  - name: gunicorn
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: cluster-health-validator
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-health-validator
+  namespace: gdc-cluster-health
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-health-validator
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8080"
+      labels:
+        app: cluster-health-validator
+    spec:
+      containers:
+      - env:
+        - name: LOG_LEVEL
+          value: INFO
+        - name: APP_CONFIG_PATH
+          value: /config/config.yaml
+        image: gcr.io/cloud-alchemists-sandbox/kamek/cluster-health-validator:9.9.9
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 15
+        name: cluster-health-validator
+        ports:
+        - containerPort: 8080
+          name: gunicorn
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 15
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        volumeMounts:
+        - mountPath: /config
+          name: config
+      imagePullSecrets:
+      - name: image-pull-secret
+      restartPolicy: Always
+      serviceAccountName: cluster-health-validator
+      volumes:
+      - configMap:
+          name: health-check-config
+        name: config
