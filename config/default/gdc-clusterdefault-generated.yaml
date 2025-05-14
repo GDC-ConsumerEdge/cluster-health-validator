@@ -144,34 +144,22 @@ subjects:
 apiVersion: v1
 data:
   config.yaml: |
+    # Base core checks only
     platform_checks:
       - name: Node Health
         module: CheckNodes
-      - name: Check Google Group RBAC
-        module: CheckGoogleGroupRBAC
       - name: Robin Cluster Health
         module: CheckRobinCluster
       - name: Root Sync Check
         module: CheckRootSyncs
       - name: VMRuntime Check
         module: CheckVMRuntime
-    # Workload Checks
-    workload_checks:
-      - name: VM Workloads Health
-        module: CheckVirtualMachines
-        parameters:
-          namespace: vm-workloads
-          count: 4
-      - name: VM Data Volume Health
-        module: CheckDataVolumes
-        parameters:
-          namespace: vm-workloads
-          count: 4
+    workload_checks: []
 kind: ConfigMap
 metadata:
   labels:
     generated-by-kustomize: "true"
-  name: health-check-config
+  name: health-check-config-5d878kg67f
   namespace: gdc-cluster-health
 ---
 apiVersion: v1
@@ -257,5 +245,5 @@ spec:
       serviceAccountName: cluster-health-validator
       volumes:
       - configMap:
-          name: health-check-config
+          name: health-check-config-5d878kg67f
         name: config
