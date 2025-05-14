@@ -241,7 +241,7 @@ spec:
         volumeMounts:
         - mountPath: /config
           name: config
-      restartPolicy: IfNotPresent
+      restartPolicy: Always
       serviceAccountName: cluster-health-validator
       volumes:
       - configMap:

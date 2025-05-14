@@ -17,7 +17,7 @@ spec:
         prometheus.io/port: "8080"
     spec:
       serviceAccountName: cluster-health-validator
-      restartPolicy: IfNotPresent
+      restartPolicy: Always
       containers:
         - name: cluster-health-validator
           image: ghcr.io/gdc-consumeredge/cluster-health-validator/cluster-health-validator
