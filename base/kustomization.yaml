@@ -9,15 +9,6 @@ resources:
   - deployment-validator.yaml
   - healthchecks.crd.yaml
 
-configMapGenerator:
-  - name: health-check-config
-    options:
-      disableNameSuffixHash: true
-      labels:
-        generated-by-kustomize: "true"
-    files:
-      - config.yaml
-
 images:
   - name: gcr.io/cloud-alchemists-sandbox/kamek/cluster-health-validator
     newTag: 1.1.0
