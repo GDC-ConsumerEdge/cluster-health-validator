@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-health-validator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-health-validator
+  template:
+    metadata:
+      labels:
+        app: cluster-health-validator
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8080"
+    spec:
+      serviceAccountName: cluster-health-validator
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: image-pull-secret
+      containers:
+        - name: cluster-health-validator
+          image: ghcr.io/gdc-consumeredge/cluster-health-validator/cluster-health-validator
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+          ports:
+            - containerPort: 8080
+              name: gunicorn
+          env:
+            - name: LOG_LEVEL
+              value: INFO
+            - name: APP_CONFIG_PATH
+              value: /config/config.yaml
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          configMap:
+            name: health-check-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-health-validator
+spec:
+  selector:
+    app: cluster-health-validator
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: gunicorn
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/robin_metrics"
+    prometheus.io/port: "8080"
+  name: robin-metric-scraper
+  namespace: default
+spec:
+  selector:
+    app: cluster-health-validator
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: gunicorn
