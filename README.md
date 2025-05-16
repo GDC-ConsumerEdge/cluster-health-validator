@@ -2,9 +2,13 @@
 
 The cluster health validator is a service that runs in-cluster and reports an
 aggregated signal of platform and workload health. The health is reported both
-as a status as a Kubernetes and asa prometheus metric. This can be used during
+as a status as a Kubernetes and as a prometheus metric. This can be used during
 cluster provisioning to signal to completion of the pre-staging process or as a
 continual sanity check of the state of a cluster.
+
+Alternatively, the cluster health validator can run locally, useful for local
+troubleshooting or to use during the cluster provisioning process without
+requiring an in-cluster component. 
 
 ## Installation
 
@@ -85,4 +89,48 @@ Below details the health check modules available as part of the solution, with s
 IMAGE_TAG=gcr.io/${PROJECT_ID}/cluster-health-validator:1.0.0
 docker build -t ${IMAGE_TAG} .
 docker push ${IMAGE_TAG}
+```
+
+## Local Usage
+
+```
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r app/requirements.txt
+
+python3 app --help
+usage: app [-h] [--health-check HEALTH_CHECK [HEALTH_CHECK ...]] [-v | -q] [-w] [-i INTERVAL] [-t TIMEOUT]
+
+options:
+  -h, --help            show this help message and exit
+  --health-check HEALTH_CHECK [HEALTH_CHECK ...]
+                        Set a health check to perform. For health checks requiring parameters, pass them in a key=value format as additional arguments. Example: --health-check
+                        checkvirtualmachines namespace=vm-workloads count=3
+  -v, --verbose         increase output verbosity; -vv for max verbosity
+  -q, --quiet           output errors only
+  -w, --wait            wait for health checks to pass before exiting
+  -i INTERVAL, --interval INTERVAL
+                        interval to poll passing health checks
+  -t TIMEOUT, --timeout TIMEOUT
+                        Overall timeout for health checks to pass
+```
+
+Examples:
+
+```
+# Run the default health checks (CheckNodes, CheckRootSyncs, CheckRobinCluster)
+python3 app
+
+# Run customized health checks
+python3 app --health-check checknodes \
+            --health-check checkrobincluster \
+            --health-check checkrootsyncs \
+            --health-check checkgooglegrouprbac \
+            --health-check checkvirtualmachines namespace=vm-workloads count=3 \
+            --health-check checkdatavolumes namespace=vm-workloads count=3
+
+# Run default health checks and wait until all health checks pass.
+#   Timeout after 1 hour if health checks don't pass
+python3 app --wait --interval 60 --timeout 3600
+
 ```
