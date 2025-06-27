@@ -8,7 +8,7 @@ log = logging.getLogger("check.virtualmachines")
 
 class CheckVirtualMachinesParameters(BaseModel):
     namespace: str
-    count: int
+    count: int | None = None
 
 
 class CheckVirtualMachines:
@@ -26,18 +26,22 @@ class CheckVirtualMachines:
             namespace=self.namespace,
         )
 
-        # Expect multiple virtualmachines
-        if len(resp.get("items")) != self.count:
+        # Check for specified count of virtualmachines
+        if self.count is not None and len(resp.get("items")) != self.count:
             log.error(
                 f'Found {len(resp.get("items"))} virtualmachines but expected {self.count}.'
             )
             return False
 
-        # Assert that each virtualmachine is running
+        # Assert that each virtualmachine is in a healthy state
+        healthy_states = ["Running", "Stopped"]
+
         for virtual_machine in resp.get("items"):
-            if virtual_machine.get("status").get("state") != "Running":
+            vm_state = virtual_machine.get("status").get("state")
+
+            if vm_state not in healthy_states:
                 log.error(
-                    f'VirtualMachine {virtual_machine.get("metadata").get("name")} not running'
+                    f'VirtualMachine {virtual_machine.get("metadata").get("name")} not in a healthy state. state={vm_state}'
                 )
                 return False
 

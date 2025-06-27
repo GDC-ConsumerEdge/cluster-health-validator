@@ -26,3 +26,10 @@ class TestConfig(unittest.TestCase):
     def test_required_fields(self):
         os.environ["APP_CONFIG_PATH"] = "testdata/missing_required.yaml"
         self.assertRaises(ValidationError, read_config)
+
+    def test_optional_module_parameters(self):
+        os.environ["APP_CONFIG_PATH"] = "testdata/optional_module_parameters.yaml"
+        result = read_config()
+        self.assertEqual(len(result.platform_checks), 4)
+        self.assertEqual(len(result.workload_checks), 2)
+        

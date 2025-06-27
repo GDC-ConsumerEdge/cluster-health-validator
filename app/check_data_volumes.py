@@ -8,8 +8,7 @@ log = logging.getLogger("check.datavolumes")
 
 class CheckDataVolumesParameters(BaseModel):
     namespace: str
-    count: int
-
+    count: int | None = None
 
 class CheckDataVolumes:
     def __init__(self, parameters: dict) -> None:
@@ -27,7 +26,7 @@ class CheckDataVolumes:
             namespace=self.namespace,
         )
 
-        if len(resp.get("items")) != self.count:
+        if self.count is not None and len(resp.get("items")) != self.count:
             log.error(
                 f'Found {len(resp.get("items"))} datavolumes but expected {self.count}.'
             )
