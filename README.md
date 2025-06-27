@@ -79,8 +79,8 @@ Below details the health check modules available as part of the solution, with s
 | CheckRobinCluster    | Checks RobinCluster Health                                             |                                                                      |
 | CheckRootSyncs       | Checks that RootSyncs are synced and have completed reconciling        |                                                                      |
 | CheckVMRuntime       | Checks that VMruntime is Ready, without any preflight failure          |                                                                      |
-| CheckVirtualMachines | Checks that the expected # of VMs are in a Running State               | **namespace**: namespace to run check against   **count**: expected # of VMs |
-| CheckDataVolumes     | Checks that the expected # of Data Volumes are 100% imported and ready | **namespace**: namespace to run check against   **count**: expected # of DVs |
+| CheckVirtualMachines | Checks that the expected # of VMs are in a Running State               | **namespace**: namespace to run check against <br >   **count**: (Optional) expected # of VMs |
+| CheckDataVolumes     | Checks that the expected # of Data Volumes are 100% imported and ready | **namespace**: namespace to run check against <br >  **count**: (Optional) expected # of DVs |
 
 
 ## Building the image
