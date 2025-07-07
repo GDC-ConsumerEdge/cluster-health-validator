@@ -60,5 +60,3 @@ workload_checks: []
         self.assertEqual(len(result.platform_checks), 0)
         self.assertEqual(len(result.workload_checks), 0)
         self.assertEqual(len(result.network_checks), 0)
-
-
