@@ -4,6 +4,7 @@ import re
 from kubernetes import client
 from pydantic import BaseModel, Field
 
+from utils import with_interval_check
 from distributed_runner import DistributedRunner
 
 log = logging.getLogger("check.ping")
@@ -20,6 +21,7 @@ class CheckPingParameters(BaseModel):
     avg_rtt_ms_threshold: float = Field(None, alias="avgRttMsThreshold")
     max_rtt_ms_threshold: float = Field(None, alias="maxRttMsThreshold")
     ping_target: str = Field(alias="pingTarget")
+    interval_seconds: int = Field(0, alias="intervalSeconds")
 
 
 class CheckPing:
@@ -41,8 +43,13 @@ class CheckPing:
         self.avg_rtt_ms_threshold = params.avg_rtt_ms_threshold
         self.max_rtt_ms_threshold = params.max_rtt_ms_threshold
         self.ping_target = params.ping_target
+        self.interval_seconds = params.interval_seconds
         self.k8s_core_v1 = client.CoreV1Api()
         self.k8s_apps_v1 = client.AppsV1Api()
+
+        # State for interval-based execution
+        self.last_run_timestamp = 0
+        self.last_run_result = True
 
     def parse_pod_logs_from_ping_test_func(self) -> callable:
         """
@@ -122,6 +129,7 @@ class CheckPing:
 
         return parse_pod_logs_from_ping_test
 
+    @with_interval_check
     def is_healthy(self):
         command_args = ["ping", "-c", str(self.count), self.ping_target]
 

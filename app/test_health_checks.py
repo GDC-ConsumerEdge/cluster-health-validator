@@ -103,91 +103,55 @@ class TestHealthCheck(unittest.TestCase):
         )
 
     def test_update_status(self):
+        # GIVEN
         failed_checks = ["Check1", "Check2"]
-        expected_condition_platform_no_failedchecks = HealthCheck.HealthCheckCondition(
-            type="PlatformHealthy",
-            status="True",
-            reason="HealthChecksPassed",
-            message="",
-        )
-        expected_condition_platform_failedchecks = HealthCheck.HealthCheckCondition(
-            type="PlatformHealthy",
-            status="False",
-            reason="HealthChecksFailed",
-            message="Failed checks: " + ",".join(failed_checks),
-        )
-        expected_condition_workloads_no_failedchecks = HealthCheck.HealthCheckCondition(
-            type="WorkloadsHealthy",
-            status="True",
-            reason="HealthChecksPassed",
-            message="",
-        )
-        expected_condition_workloads_failedchecks = HealthCheck.HealthCheckCondition(
-            type="WorkloadsHealthy",
-            status="False",
-            reason="HealthChecksFailed",
-            message="Failed checks: " + ",".join(failed_checks),
-        )
 
-        self.hc.update_status([], [])
+        # WHEN I update with no failures
+        self.hc.update_status([], [], [])
+        # THEN the status is patched correctly
         _, kwargs = self.custom_patch.call_args
-        self.assertEqual(
-            expected_condition_platform_no_failedchecks,
-            HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][0]
-            ),
-        )
-        self.assertEqual(
-            expected_condition_workloads_no_failedchecks,
-            HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][1]
-            ),
-        )
+        conditions = kwargs["body"]["status"]["conditions"]
+        self.assertEqual(conditions[0]["type"], "PlatformHealthy")
+        self.assertEqual(conditions[0]["status"], "True")
+        self.assertEqual(conditions[0]["reason"], "HealthChecksPassed")
+        self.assertEqual(conditions[1]["type"], "WorkloadsHealthy")
+        self.assertEqual(conditions[1]["status"], "True")
+        self.assertEqual(conditions[1]["reason"], "HealthChecksPassed")
+        self.assertEqual(conditions[2]["type"], "NetworkHealthy")
+        self.assertEqual(conditions[2]["status"], "True")
+        self.assertEqual(conditions[2]["reason"], "HealthChecksPassed")
 
-        self.hc.update_status([], failed_checks)
+        # WHEN I update with some failures
+        self.hc.update_status(failed_checks, [], ["NetworkCheck"])
+        # THEN the status is patched correctly
         _, kwargs = self.custom_patch.call_args
-        self.assertEqual(
-            expected_condition_platform_no_failedchecks,
-            HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][0]
-            ),
-        )
-        self.assertEqual(
-            expected_condition_workloads_failedchecks,
-            HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][1]
-            ),
-        )
+        conditions = kwargs["body"]["status"]["conditions"]
+        # Platform has failures
+        self.assertEqual(conditions[0]["type"], "PlatformHealthy")
+        self.assertEqual(conditions[0]["status"], "False")
+        self.assertEqual(conditions[0]["reason"], "HealthChecksFailed")
+        self.assertEqual(conditions[0]["message"], "Failed checks: Check1,Check2")
+        # Workload is fine
+        self.assertEqual(conditions[1]["type"], "WorkloadsHealthy")
+        self.assertEqual(conditions[1]["status"], "True")
+        self.assertEqual(conditions[1]["reason"], "HealthChecksPassed")
+        # Network has failures
+        self.assertEqual(conditions[2]["type"], "NetworkHealthy")
+        self.assertEqual(conditions[2]["status"], "False")
+        self.assertEqual(conditions[2]["reason"], "HealthChecksFailed")
+        self.assertEqual(conditions[2]["message"], "Failed checks: NetworkCheck")
 
-        self.hc.update_status(failed_checks, [])
+        # WHEN I update with no checks defined (None)
+        self.hc.update_status(None, None, None)
+        # THEN the status is patched correctly
         _, kwargs = self.custom_patch.call_args
-        self.assertEqual(
-            expected_condition_platform_failedchecks,
-            HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][0]
-            ),
-        )
-        self.assertEqual(
-            expected_condition_workloads_no_failedchecks,
-            HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][1]
-            ),
-        )
-
-        self.hc.update_status(failed_checks, failed_checks)
-        _, kwargs = self.custom_patch.call_args
-        self.assertEqual(
-            expected_condition_platform_failedchecks,
-            HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][0]
-            ),
-        )
-        self.assertEqual(
-            expected_condition_workloads_failedchecks,
-            HealthCheck.HealthCheckCondition(
-                **kwargs["body"]["status"]["conditions"][1]
-            ),
-        )
+        conditions = kwargs["body"]["status"]["conditions"]
+        self.assertEqual(conditions[0]["status"], "Unknown")
+        self.assertEqual(conditions[0]["reason"], "HealthChecksNotDefined")
+        self.assertEqual(conditions[1]["status"], "Unknown")
+        self.assertEqual(conditions[1]["reason"], "HealthChecksNotDefined")
+        self.assertEqual(conditions[2]["status"], "Unknown")
+        self.assertEqual(conditions[2]["reason"], "HealthChecksNotDefined")
 
 
 if __name__ == "__main__":

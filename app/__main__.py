@@ -9,6 +9,8 @@ from check_robin_cluster import CheckRobinCluster
 from check_root_syncs import CheckRootSyncs
 from check_virtual_machines import CheckVirtualMachines
 from check_vmruntime import CheckVMRuntime
+from check_ping import CheckPing
+from check_network_speed import CheckNetworkSpeed
 from kubernetes import config
 
 health_check_map = {
@@ -19,6 +21,8 @@ health_check_map = {
     CheckVMRuntime.__name__.lower(): CheckVMRuntime,
     CheckDataVolumes.__name__.lower(): CheckDataVolumes,
     CheckVirtualMachines.__name__.lower(): CheckVirtualMachines,
+    CheckPing.__name__.lower(): CheckPing,
+    CheckNetworkSpeed.__name__.lower(): CheckNetworkSpeed,
 }
 
 default_health_checks = [

@@ -13,12 +13,16 @@ class TestCheckPing(unittest.TestCase):
         self.mock_runner_instance = MagicMock()
         self.MockDistributedRunner.return_value = self.mock_runner_instance
 
+        self.mock_time_patch = patch("utils.time.time")
+        self.mock_time = self.mock_time_patch.start()
+
         self.valid_params = {
             "pingTarget": "8.8.8.8",
         }
 
     def tearDown(self):
         self.mock_distributed_runner_patch.stop()
+        self.mock_time_patch.stop()
 
     def test_init_with_minimal_parameters(self):
         """Tests that CheckPing initializes correctly with minimal valid parameters."""
@@ -31,6 +35,7 @@ class TestCheckPing(unittest.TestCase):
         self.assertIsNone(check.secondary_network_config)
         self.assertIsNone(check.avg_rtt_ms_threshold)
         self.assertIsNone(check.max_rtt_ms_threshold)
+        self.assertEqual(check.interval_seconds, 0)
 
     def test_init_with_custom_parameters(self):
         """Tests initialization with custom parameters."""
@@ -43,6 +48,7 @@ class TestCheckPing(unittest.TestCase):
             "avgRttMsThreshold": 50.0,
             "maxRttMsThreshold": 100.0,
             "pingTarget": "1.1.1.1",
+            "intervalSeconds": 86400,
         }
         check = CheckPing(params)
         self.assertEqual(check.namespace, "custom-ns")
@@ -53,6 +59,7 @@ class TestCheckPing(unittest.TestCase):
         self.assertEqual(check.avg_rtt_ms_threshold, 50.0)
         self.assertEqual(check.max_rtt_ms_threshold, 100.0)
         self.assertEqual(check.ping_target, "1.1.1.1")
+        self.assertEqual(check.interval_seconds, 86400)
 
     def test_init_with_missing_required_parameters(self):
         """Tests that initialization fails if required parameters are missing."""
@@ -218,6 +225,39 @@ class TestCheckPing(unittest.TestCase):
             pod_template.metadata.annotations,
             {"networking.gke.io/interfaces": '{"name": "net1"}'},
         )
+
+    def test_run_frequency_logic(self):
+        """Tests that the check respects the intervalSeconds."""
+        params = self.valid_params.copy()
+        params["intervalSeconds"] = 3600  # 1 hour
+        check = CheckPing(params)
+
+        # First run
+        self.mock_time.return_value = 10000.0
+        self.mock_runner_instance.run_on_all_nodes.return_value = True
+        self.assertTrue(check.is_healthy())
+        self.mock_runner_instance.run_on_all_nodes.assert_called_once()
+        self.assertEqual(check.last_run_timestamp, 10000.0)
+        self.assertTrue(check.last_run_result)
+
+        # Second run, within interval, should skip and return previous result
+        self.mock_time.return_value = 11000.0  # 1000s later
+        self.assertTrue(check.is_healthy())
+        # run_on_all_nodes should NOT be called again
+        self.mock_runner_instance.run_on_all_nodes.assert_called_once()
+
+        # Third run, after interval, should run again
+        self.mock_time.return_value = 10000.0 + 3601.0  # 1 hour and 1 sec later
+        self.mock_runner_instance.run_on_all_nodes.return_value = False
+        self.assertFalse(check.is_healthy())
+        self.assertEqual(self.mock_runner_instance.run_on_all_nodes.call_count, 2)
+        self.assertEqual(check.last_run_timestamp, 10000.0 + 3601.0)
+        self.assertFalse(check.last_run_result)
+
+        # Fourth run, within interval, should skip and return new previous (failed) result
+        self.mock_time.return_value = 10000.0 + 3602.0
+        self.assertFalse(check.is_healthy())
+        self.assertEqual(self.mock_runner_instance.run_on_all_nodes.call_count, 2)
 
 
 if __name__ == "__main__":

@@ -19,6 +19,13 @@ workload_checks:
   module: CheckVirtualMachines
   parameters:
     namespace: vm-workloads
+
+network_checks:
+- name: Ping Google DNS
+  module: CheckPing
+  parameters:
+    namespace: cluster-health
+    pingTarget: 8.8.8.8
 """
 
 
@@ -29,8 +36,9 @@ class HealthCheck(TypedDict):
 
 
 class Config(BaseModel):
-    platform_checks: list[HealthCheck]
-    workload_checks: list[HealthCheck]
+    platform_checks: list[HealthCheck] = []
+    workload_checks: list[HealthCheck] = []
+    network_checks: list[HealthCheck] = []
 
 
 def read_config():
