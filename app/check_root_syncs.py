@@ -8,6 +8,24 @@ log = logging.getLogger("check.rootsyncs")
 
 class CheckRootSyncs:
     def is_healthy(self):
+        k8s_app = client.AppsV1Api()
+        try:
+            resp = k8s_app.read_namespaced_deployment(
+                name="config-management-operator",
+                namespace="config-management-system",
+            )
+            if resp.status.ready_replicas != 1:
+                log.error(
+                    "deployment.apps/config-management-operator is not running."
+                    + f" Found {resp.status.ready_replicas} ready replicas but expected 1"
+                )
+                return False
+        except client.ApiException as e:
+            log.error(
+                "Exception when calling AppsV1Api->read_namespaced_deployment: %s\n" % e
+            )
+            return False
+
         k8s = client.CustomObjectsApi()
         resp = k8s.list_namespaced_custom_object(
             group="configsync.gke.io",
