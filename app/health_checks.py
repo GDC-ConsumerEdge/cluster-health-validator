@@ -66,6 +66,14 @@ class HealthCheck:
             lastTransitionTime=date_time_now,
             lastUpdateTime=date_time_now,
         )
+        self.condition_network = self.HealthCheckCondition(
+            type="NetworkHealthy",
+            status="Unknown",
+            reason="Pending",
+            message="Checks not run yet",
+            lastTransitionTime=date_time_now,
+            lastUpdateTime=date_time_now,
+        )
 
         if not self.is_crd_installed():
             self.install_crd()
@@ -79,13 +87,16 @@ class HealthCheck:
             if (
                 "status" in health_check_resource
                 and "conditions" in health_check_resource["status"]
-                and len(health_check_resource["status"]["conditions"]) == 2
+                and len(health_check_resource["status"]["conditions"]) == 3
             ):
                 self.condition_platform = self.HealthCheckCondition(
                     **health_check_resource["status"]["conditions"][0]
                 )
                 self.condition_workloads = self.HealthCheckCondition(
                     **health_check_resource["status"]["conditions"][1]
+                )
+                self.condition_network = self.HealthCheckCondition(
+                    **health_check_resource["status"]["conditions"][2]
                 )
 
     def install_crd(self):
@@ -97,7 +108,7 @@ class HealthCheck:
             time.sleep(2)
 
     def is_crd_installed(self):
-        """Check if healtcheckcustom resource definition is installed."""
+        """Check if healthcheckcustom resource definition is installed."""
         try:
             self.crd_api.read_custom_resource_definition(
                 name=f"{self.plural}.{self.group}"
@@ -126,6 +137,7 @@ class HealthCheck:
                 "conditions": [
                     self.condition_platform.to_dict(),
                     self.condition_workloads.to_dict(),
+                    self.condition_network.to_dict(),
                 ]
             }
         }
@@ -161,8 +173,9 @@ class HealthCheck:
     ) -> None:
         """Updates HealthCheckCondition fields.
         Args:
-            condition: HealthCheck condition platform or workload
-            failed_checks: List of failed checks
+            condition: HealthCheck condition platform, workload, or network
+            failed_checks: List of failed checks. If None, then treat as no
+                           health checks defined.
         """
         date_time_now = datetime.now().strftime(_DATETIME_FORMAT)
         previous_status = condition.status
@@ -170,6 +183,10 @@ class HealthCheck:
             condition.status = "False"
             condition.reason = "HealthChecksFailed"
             condition.message = "Failed checks: " + ",".join(failed_checks)
+        elif failed_checks is None:
+            condition.status = "Unknown"
+            condition.reason = "HealthChecksNotDefined"
+            condition.message = "No health checks defined"
         else:
             condition.status = "True"
             condition.reason = "HealthChecksPassed"
@@ -183,19 +200,23 @@ class HealthCheck:
         self,
         failed_platform_checks: List[str],
         failed_workload_checks: List[str],
+        failed_network_checks: List[str],
     ) -> None:
         """Updates default healthcheck resource status.
         Args:
             failed_platform_checks: List of failed platform checks
             failed_workload_checks: List of failed workload checks
+            failed_network_checks: List of failed network checks
         """
         self.update_condition(self.condition_platform, failed_platform_checks)
         self.update_condition(self.condition_workloads, failed_workload_checks)
+        self.update_condition(self.condition_network, failed_network_checks)
         patch = {
             "status": {
                 "conditions": [
                     self.condition_platform.to_dict(),
                     self.condition_workloads.to_dict(),
+                    self.condition_network.to_dict(),
                 ]
             }
         }

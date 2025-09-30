@@ -7,7 +7,9 @@ from apscheduler.schedulers import base
 from apscheduler.schedulers.background import BackgroundScheduler
 from check_data_volumes import CheckDataVolumes
 from check_google_group_rbac import CheckGoogleGroupRBAC
+from check_network_speed import CheckNetworkSpeed
 from check_nodes import CheckNodes
+from check_ping import CheckPing
 from check_robin_cluster import CheckRobinCluster
 from check_root_syncs import CheckRootSyncs
 from check_virtual_machines import CheckVirtualMachines
@@ -26,6 +28,7 @@ app = Flask(__name__)
 
 platform_health_metric = Gauge("platform_health", "Platform Checks")
 workload_health_metric = Gauge("workload_health", "Workload Checks")
+network_health_metric = Gauge("network_health", "Network Checks")
 
 _MAX_WORKERS = os.environ.get("MAX_WORKERS", 10)
 _ROBIN_MASTER_SVC_ENDPOINT = "robin-master.robinio.svc.cluster.local"
@@ -39,9 +42,15 @@ health_check_map = {
     CheckVMRuntime.__name__: CheckVMRuntime,
     CheckDataVolumes.__name__: CheckDataVolumes,
     CheckVirtualMachines.__name__: CheckVirtualMachines,
+    CheckPing.__name__: CheckPing,
+    CheckNetworkSpeed.__name__: CheckNetworkSpeed,
     CheckVirtualMachineDisks.__name__: CheckVirtualMachineDisks
 }
 
+platform_checks = []
+workload_checks = []
+network_checks = []
+app_config = None
 
 @app.route("/metrics")
 def metrics():
@@ -79,32 +88,41 @@ def create_health_check_cr():
         logging.error("Health status will not updated in k8s CR")
     return None
 
+def generate_health_checks_from_config(check_config):
+    checks = []
 
-def run_checks():
+    for check in check_config:
+        if "parameters" in check:
+            checks.append(
+                health_check_map[check["module"]](check["parameters"])
+            )
+        else:
+            checks.append(health_check_map[check["module"]]())
+
+    return checks
+
+def initialize_health_checks():
     global health_check_cr
     if not health_check_cr:
         health_check_cr = HealthCheck()
 
-    platform_checks = []
-    workload_checks = []
+    new_config = read_config()
 
-    app_config = read_config()
+    global app_config
 
-    for check in app_config.platform_checks:
-        if "parameters" in check:
-            platform_checks.append(
-                health_check_map[check["module"]](check["parameters"])
-            )
-        else:
-            platform_checks.append(health_check_map[check["module"]]())
+    # Check if health check configuration has changed and needs to be reloaded
+    if new_config != app_config:
+        logging.info("Loading new health check configuration")
+        app_config = new_config
 
-    for check in app_config.workload_checks:
-        if "parameters" in check:
-            workload_checks.append(
-                health_check_map[check["module"]](check["parameters"])
-            )
-        else:
-            workload_checks.append(health_check_map[check["module"]]())
+        global platform_checks, workload_checks, network_checks
+        platform_checks = generate_health_checks_from_config(app_config.platform_checks)
+        workload_checks = generate_health_checks_from_config(app_config.workload_checks)
+        network_checks = generate_health_checks_from_config(app_config.network_checks)
+
+
+def run_checks():
+    initialize_health_checks()
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as executor:
         platform_checks_futures = {
@@ -115,8 +133,15 @@ def run_checks():
             executor.submit(check.is_healthy): check.__class__.__name__
             for check in workload_checks
         }
+        network_checks_futures = {
+            executor.submit(check.is_healthy): check.__class__.__name__
+            for check in network_checks
+        }
 
-        def wait_on_futures(futures):
+        def wait_on_futures(futures, health_metric):
+            if len(futures) == 0 or futures is None:
+                return None
+
             checks_failed = []
             for future in concurrent.futures.as_completed(futures):
                 name = futures[future]
@@ -130,27 +155,25 @@ def run_checks():
                         checks_failed.append(name)
                     else:
                         raise
+
+            if checks_failed:
+                health_metric.set(0)
+            else:
+                health_metric.set(1)
+            
             return checks_failed
 
-        platform_checks_failed = wait_on_futures(platform_checks_futures)
-        workload_checks_failed = wait_on_futures(workload_checks_futures)
+        platform_checks_failed = wait_on_futures(platform_checks_futures, platform_health_metric)
+        workload_checks_failed = wait_on_futures(workload_checks_futures, workload_health_metric)
+        network_checks_failed = wait_on_futures(network_checks_futures, network_health_metric)
 
         logging.debug("Platform checks failed: %s", platform_checks_failed)
         logging.debug("Workload checks failed: %s", workload_checks_failed)
-
-        if platform_checks_failed:
-            platform_health_metric.set(0)
-        else:
-            platform_health_metric.set(1)
-
-        if workload_checks_failed:
-            workload_health_metric.set(0)
-        else:
-            workload_health_metric.set(1)
+        logging.debug("Network checks failed: %s", network_checks_failed)
 
         if health_check_cr:
             health_check_cr.update_status(
-                platform_checks_failed, workload_checks_failed
+                platform_checks_failed, workload_checks_failed, network_checks_failed
             )
 
 

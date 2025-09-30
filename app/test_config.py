@@ -1,5 +1,6 @@
 import os
 import unittest
+from unittest.mock import mock_open, patch
 
 import yaml
 from config import read_config
@@ -7,29 +8,55 @@ from pydantic import ValidationError
 
 
 class TestConfig(unittest.TestCase):
-    def test_complete_config(self):
-        os.environ["APP_CONFIG_PATH"] = "testdata/complete_config.yaml"
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="""
+platform_checks:
+  - { name: p1, module: m1 }
+  - { name: p2, module: m2 }
+  - { name: p3, module: m3 }
+  - { name: p4, module: m4 }
+workload_checks:
+  - { name: w1, module: m5 }
+  - { name: w2, module: m6 }
+network_checks:
+  - { name: n1, module: m7 }
+""",
+    )
+    def test_complete_config(self, mock_file):
         result = read_config()
         self.assertEqual(len(result.platform_checks), 4)
         self.assertEqual(len(result.workload_checks), 2)
+        self.assertEqual(len(result.network_checks), 1)
 
-    def test_complete_config(self):
-        os.environ["APP_CONFIG_PATH"] = "testdata/platform_only_config.yaml"
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="""
+platform_checks:
+  - { name: p1, module: m1 }
+  - { name: p2, module: m2 }
+  - { name: p3, module: m3 }
+  - { name: p4, module: m4 }
+workload_checks: []
+""",
+    )
+    def test_backward_compatible_config(self, mock_file):
         result = read_config()
         self.assertEqual(len(result.platform_checks), 4)
         self.assertEqual(len(result.workload_checks), 0)
+        self.assertEqual(len(result.network_checks), 0)
 
-    def test_invalid_yaml(self):
-        os.environ["APP_CONFIG_PATH"] = "testdata/invalid_config.yaml"
+    @patch("builtins.open", new_callable=mock_open, read_data="platform_checks: -")
+    def test_invalid_yaml(self, mock_file):
         self.assertRaises(yaml.YAMLError, read_config)
 
-    def test_required_fields(self):
-        os.environ["APP_CONFIG_PATH"] = "testdata/missing_required.yaml"
-        self.assertRaises(ValidationError, read_config)
-
-    def test_optional_module_parameters(self):
-        os.environ["APP_CONFIG_PATH"] = "testdata/optional_module_parameters.yaml"
+    @patch(
+        "builtins.open", new_callable=mock_open, read_data="some_other_property: 123"
+    )
+    def test_all_fields_optional(self, mock_file):
         result = read_config()
-        self.assertEqual(len(result.platform_checks), 4)
-        self.assertEqual(len(result.workload_checks), 2)
-        
+        self.assertEqual(len(result.platform_checks), 0)
+        self.assertEqual(len(result.workload_checks), 0)
+        self.assertEqual(len(result.network_checks), 0)

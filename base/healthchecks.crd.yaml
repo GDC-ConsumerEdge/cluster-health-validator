@@ -21,6 +21,9 @@ spec:
     - name: workload_checks
       jsonPath: ".status.conditions[?(@.type=='WorkloadsHealthy')].reason"
       type: string
+    - name: network_checks
+      jsonPath: ".status.conditions[?(@.type=='NetworkHealthy')].reason"
+      type: string
     schema:
       openAPIV3Schema:
         type: object
@@ -72,6 +75,7 @@ spec:
                       enum:
                       - HealthChecksPassed
                       - HealthChecksFailed
+                      - HealthChecksNotDefined
                       - Pending
                     status:
                       type: string
@@ -86,6 +90,7 @@ spec:
                       enum:
                       - PlatformHealthy
                       - WorkloadsHealthy
+                      - NetworkHealthy
                   required:
                   - status
                   - type
