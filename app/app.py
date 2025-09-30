@@ -13,6 +13,7 @@ from check_ping import CheckPing
 from check_robin_cluster import CheckRobinCluster
 from check_root_syncs import CheckRootSyncs
 from check_virtual_machines import CheckVirtualMachines
+from check_virtual_machine_disks import CheckVirtualMachineDisks
 from check_vmruntime import CheckVMRuntime
 from config import read_config
 from flask import Flask, abort
@@ -43,6 +44,7 @@ health_check_map = {
     CheckVirtualMachines.__name__: CheckVirtualMachines,
     CheckPing.__name__: CheckPing,
     CheckNetworkSpeed.__name__: CheckNetworkSpeed,
+    CheckVirtualMachineDisks.__name__: CheckVirtualMachineDisks
 }
 
 platform_checks = []
