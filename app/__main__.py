@@ -8,6 +8,7 @@ from check_nodes import CheckNodes
 from check_robin_cluster import CheckRobinCluster
 from check_root_syncs import CheckRootSyncs
 from check_virtual_machines import CheckVirtualMachines
+from check_virtual_machine_disks import CheckVirtualMachineDisks
 from check_vmruntime import CheckVMRuntime
 from kubernetes import config
 
@@ -19,6 +20,7 @@ health_check_map = {
     CheckVMRuntime.__name__.lower(): CheckVMRuntime,
     CheckDataVolumes.__name__.lower(): CheckDataVolumes,
     CheckVirtualMachines.__name__.lower(): CheckVirtualMachines,
+    CheckVirtualMachineDisks.__name__.lower(): CheckVirtualMachineDisks,
 }
 
 default_health_checks = [
