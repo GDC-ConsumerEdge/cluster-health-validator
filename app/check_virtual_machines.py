@@ -2,8 +2,20 @@ import logging
 
 from kubernetes import client
 from pydantic import BaseModel
+from prometheus_client import Counter
 
 log = logging.getLogger("check.virtualmachines")
+
+VIRTUAL_MACHINE_SUCCESS_TOTAL = Counter(
+    'virtual_machine_success_total',
+    'Total number of successful virtual machine checks',
+    ['namespace']
+)
+VIRTUAL_MACHINE_FAILURE_TOTAL = Counter(
+    'virtual_machine_failure_total',
+    'Total number of failed virtual machine checks',
+    ['namespace']
+)
 
 
 class CheckVirtualMachinesParameters(BaseModel):
@@ -31,6 +43,7 @@ class CheckVirtualMachines:
             log.error(
                 f'Found {len(resp.get("items"))} virtualmachines but expected {self.count}.'
             )
+            VIRTUAL_MACHINE_FAILURE_TOTAL.labels(namespace=self.namespace).inc()
             return False
 
         # Assert that each virtualmachine is in a healthy state
@@ -43,7 +56,9 @@ class CheckVirtualMachines:
                 log.error(
                     f'VirtualMachine {virtual_machine.get("metadata").get("name")} not in a healthy state. state={vm_state}'
                 )
+                VIRTUAL_MACHINE_FAILURE_TOTAL.labels(namespace=self.namespace).inc()
                 return False
 
         log.info("Check virtual machines passed")
+        VIRTUAL_MACHINE_SUCCESS_TOTAL.labels(namespace=self.namespace).inc()
         return True

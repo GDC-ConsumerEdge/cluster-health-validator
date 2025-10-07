@@ -2,8 +2,20 @@ import logging
 
 from kubernetes import client
 from pydantic import BaseModel
+from prometheus_client import Counter
 
 log = logging.getLogger("check.virtualmachinedisks")
+
+VIRTUAL_MACHINE_DISK_SUCCESS_TOTAL = Counter(
+    'virtual_machine_disk_success_total',
+    'Total number of successful virtual machine disk checks',
+    ['namespace']
+)
+VIRTUAL_MACHINE_DISK_FAILURE_TOTAL = Counter(
+    'virtual_machine_disk_failure_total',
+    'Total number of failed virtual machine disk checks',
+    ['namespace']
+)
 
 
 class CheckVirtualMachineDisksParameters(BaseModel):
@@ -31,6 +43,7 @@ class CheckVirtualMachineDisks:
             log.error(
                 f'Found {len(resp.get("items"))} virtualmachinedisks but expected {self.count}.'
             )
+            VIRTUAL_MACHINE_DISK_FAILURE_TOTAL.labels(namespace=self.namespace).inc()
             return False
        
         # Assert that each virtualmachine disk is Succeeded.
@@ -39,14 +52,17 @@ class CheckVirtualMachineDisks:
                 log.error(
                     f'DataVolume {virtual_machine_disk.get("metadata").get("name")} phase not succeeded'
                 )
+                VIRTUAL_MACHINE_DISK_FAILURE_TOTAL.labels(namespace=self.namespace).inc()
                 return False
             
             if virtual_machine_disk.get("status").get("progress") != "100.0%" and not virtual_machine_disk.get("metadata").get("labels").get("vm.cluster.gke.io/virtual-machine-restore"):
                 log.error(
                     f'DataVolume {virtual_machine_disk.get("metadata").get("name")} not finished importing'
                 )
+                VIRTUAL_MACHINE_DISK_FAILURE_TOTAL.labels(namespace=self.namespace).inc()
                 return False
             
 
         log.info("Check virtual machines disks passed")
+        VIRTUAL_MACHINE_DISK_SUCCESS_TOTAL.labels(namespace=self.namespace).inc()
         return True

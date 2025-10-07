@@ -19,3 +19,15 @@ workload_checks:
   parameters:
     namespace: vm-workloads
     count: 4
+- name: HTTP Endpoints
+  module: CheckHttpEndpoints
+  parameters:
+    endpoints:
+    - name: Example GET
+      url: http://example.com
+      timeout: 5
+      method: GET
+    - name: Example POST
+      url: http://example.com
+      timeout: 10
+      method: POST

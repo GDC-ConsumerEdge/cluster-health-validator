@@ -15,11 +15,19 @@ class TestCheckDataVolumes(unittest.TestCase):
             self.mock_custom_objects_api
         )
 
+        # Patch the Prometheus counters
+        self.success_counter_patcher = patch("check_data_volumes.DATA_VOLUME_SUCCESS_TOTAL")
+        self.mock_success_counter = self.success_counter_patcher.start()
+        self.failure_counter_patcher = patch("check_data_volumes.DATA_VOLUME_FAILURE_TOTAL")
+        self.mock_failure_counter = self.failure_counter_patcher.start()
+
     def tearDown(self):
         self.k8s_client_patcher.stop()
+        self.success_counter_patcher.stop()
+        self.failure_counter_patcher.stop()
 
     def test_is_healthy_success(self):
-        """Test is_healthy returns True when all data volumes are succeeded and count matches."""
+        """Test is_healthy returns True and increments success counter when all data volumes are succeeded and count matches."""
         params = {"namespace": "test-ns", "count": 2}
         checker = CheckDataVolumes(parameters=params)
 
@@ -46,9 +54,12 @@ class TestCheckDataVolumes(unittest.TestCase):
             plural="datavolumes",
             namespace="test-ns",
         )
+        self.mock_success_counter.labels.assert_called_once_with(namespace="test-ns")
+        self.mock_success_counter.labels.return_value.inc.assert_called_once()
+        self.mock_failure_counter.labels.assert_not_called()
 
     def test_is_healthy_incorrect_count(self):
-        """Test is_healthy returns False when the number of data volumes does not match the expected count."""
+        """Test is_healthy returns False and increments failure counter when the number of data volumes does not match the expected count."""
         params = {"namespace": "test-ns", "count": 3}
         checker = CheckDataVolumes(parameters=params)
 
@@ -69,9 +80,12 @@ class TestCheckDataVolumes(unittest.TestCase):
         )
 
         self.assertFalse(checker.is_healthy())
+        self.mock_failure_counter.labels.assert_called_once_with(namespace="test-ns")
+        self.mock_failure_counter.labels.return_value.inc.assert_called_once()
+        self.mock_success_counter.labels.assert_not_called()
 
     def test_is_healthy_phase_not_succeeded(self):
-        """Test is_healthy returns False when a data volume phase is not 'Succeeded'."""
+        """Test is_healthy returns False and increments failure counter when a data volume phase is not 'Succeeded'."""
         params = {"namespace": "test-ns", "count": 2}
         checker = CheckDataVolumes(parameters=params)
 
@@ -89,9 +103,12 @@ class TestCheckDataVolumes(unittest.TestCase):
         )
 
         self.assertFalse(checker.is_healthy())
+        self.mock_failure_counter.labels.assert_called_once_with(namespace="test-ns")
+        self.mock_failure_counter.labels.return_value.inc.assert_called_once()
+        self.mock_success_counter.labels.assert_not_called()
 
     def test_is_healthy_progress_not_complete(self):
-        """Test is_healthy returns False when a data volume progress is not '100.0%'."""
+        """Test is_healthy returns False and increments failure counter when a data volume progress is not '100.0%'."""
         params = {"namespace": "test-ns", "count": 2}
         checker = CheckDataVolumes(parameters=params)
 
@@ -112,9 +129,12 @@ class TestCheckDataVolumes(unittest.TestCase):
         )
 
         self.assertFalse(checker.is_healthy())
+        self.mock_failure_counter.labels.assert_called_once_with(namespace="test-ns")
+        self.mock_failure_counter.labels.return_value.inc.assert_called_once()
+        self.mock_success_counter.labels.assert_not_called()
 
     def test_is_healthy_no_datavolumes_expected(self):
-        """Test is_healthy returns True when no data volumes are found and count is 0."""
+        """Test is_healthy returns True and increments success counter when no data volumes are found and count is 0."""
         params = {"namespace": "test-ns", "count": 0}
         checker = CheckDataVolumes(parameters=params)
 
@@ -124,6 +144,9 @@ class TestCheckDataVolumes(unittest.TestCase):
         )
 
         self.assertTrue(checker.is_healthy())
+        self.mock_success_counter.labels.assert_called_once_with(namespace="test-ns")
+        self.mock_success_counter.labels.return_value.inc.assert_called_once()
+        self.mock_failure_counter.labels.assert_not_called()
 
     def test_init_invalid_parameters(self):
         """Test that initializing with invalid parameters raises a ValidationError."""
