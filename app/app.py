@@ -28,7 +28,7 @@ app = Flask(__name__)
 platform_health_metric = Gauge("platform_health", "Platform Checks")
 workload_health_metric = Gauge("workload_health", "Workload Checks")
 
-_MAX_WORKERS = os.environ.get("MAX_WORKERS", 10)
+_MAX_WORKERS = int(os.environ.get("MAX_WORKERS", 10))
 _ROBIN_MASTER_SVC_ENDPOINT = "robin-master.robinio.svc.cluster.local"
 _ROBIN_MASTER_SVC_METRICS_PORT = 29446
 
