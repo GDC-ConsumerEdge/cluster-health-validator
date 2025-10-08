@@ -26,7 +26,7 @@ class TestCheckHttpEndpoints(unittest.TestCase):
         mock_success.labels.assert_called_once_with(endpoint_name='example')
         mock_success.labels.return_value.inc.assert_called_once()
         mock_failure.labels.assert_not_called()
-        mock_latency.labels.assert_called_once_with(endpoint_name='example')
+        mock_latency.labels.assert_called_once_with(endpoint_name='example', status='success')
         mock_latency.labels.return_value.observe.assert_called_once()
 
     @patch('check_http_endpoints.requests.request')
@@ -48,7 +48,7 @@ class TestCheckHttpEndpoints(unittest.TestCase):
         mock_failure.labels.assert_called_once_with(endpoint_name='example')
         mock_failure.labels.return_value.inc.assert_called_once()
         mock_success.labels.assert_not_called()
-        mock_latency.labels.assert_called_once_with(endpoint_name='example')
+        mock_latency.labels.assert_called_once_with(endpoint_name='example', status='failure')
         mock_latency.labels.return_value.observe.assert_called_once()
 
     @patch('check_http_endpoints.requests.request')
@@ -67,7 +67,7 @@ class TestCheckHttpEndpoints(unittest.TestCase):
         mock_failure.labels.assert_called_once_with(endpoint_name='example')
         mock_failure.labels.return_value.inc.assert_called_once()
         mock_success.labels.assert_not_called()
-        mock_latency.labels.assert_called_once_with(endpoint_name='example')
+        mock_latency.labels.assert_called_once_with(endpoint_name='example', status='failure')
         mock_latency.labels.return_value.observe.assert_called_once()
 
     @patch('check_http_endpoints.time.time')
@@ -79,6 +79,7 @@ class TestCheckHttpEndpoints(unittest.TestCase):
         """Test that latency is recorded for endpoint checks."""
         mock_response = MagicMock()
         mock_response.ok = True
+        mock_response.elapsed.total_seconds.return_value = 0.5
         mock_request.return_value = mock_response
         mock_time.side_effect = [100, 100.5]
 
@@ -87,7 +88,7 @@ class TestCheckHttpEndpoints(unittest.TestCase):
         endpoint = Endpoint(name="example", url="http://example.com")
 
         checker.check_endpoint(endpoint)
-        mock_latency.labels.assert_called_once_with(endpoint_name='example')
+        mock_latency.labels.assert_called_once_with(endpoint_name='example', status='success')
         mock_latency.labels.return_value.observe.assert_called_once_with(0.5)
 
     def test_init_invalid_parameters(self):

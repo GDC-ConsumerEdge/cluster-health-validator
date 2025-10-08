@@ -6,6 +6,8 @@ import concurrent.futures
 from pydantic import BaseModel, Field
 from typing import List
 from prometheus_client import Counter, Histogram
+import socket
+from urllib.parse import urlparse
 
 log = logging.getLogger('check.http_endpoints')
 
@@ -22,7 +24,7 @@ HTTP_ENDPOINT_FAILURE_TOTAL = Counter(
 HTTP_ENDPOINT_LATENCY_SECONDS = Histogram(
     'http_endpoint_latency_seconds',
     'Latency of HTTP endpoint checks in seconds',
-    ['endpoint_name']
+    ['endpoint_name', 'status']
 )
 
 class Endpoint(BaseModel):
@@ -48,20 +50,31 @@ class CheckHttpEndpoints:
         return True
 
     def check_endpoint(self, endpoint: Endpoint):
+        # Pre-resolve DNS to warm up the cache for timing purposes.
+        try:
+            parsed_url = urlparse(endpoint.url)
+            hostname = parsed_url.hostname
+            port = parsed_url.port or {'http': 80, 'https': 443}.get(parsed_url.scheme, 80)
+            if hostname:
+                socket.getaddrinfo(hostname, port)
+        except (socket.gaierror, TypeError) as e:
+            # Log the pre-resolution failure, but proceed. The actual request will handle the error.
+            log.warning(f"DNS pre-resolution failed for {hostname}: {e}")
+
         start_time = time.time()
         try:
             response = requests.request(endpoint.method, endpoint.url, timeout=endpoint.timeout)
             if not response.ok:
                 log.error(f"HTTP endpoint {endpoint.name} ({endpoint.url}) returned status code {response.status_code}")
                 HTTP_ENDPOINT_FAILURE_TOTAL.labels(endpoint_name=endpoint.name).inc()
+                HTTP_ENDPOINT_LATENCY_SECONDS.labels(endpoint_name=endpoint.name, status='failure').observe(response.elapsed.total_seconds())
                 return False
         except requests.exceptions.RequestException as e:
             log.error(f"Failed to connect to HTTP endpoint {endpoint.name} ({endpoint.url}): {e}")
             HTTP_ENDPOINT_FAILURE_TOTAL.labels(endpoint_name=endpoint.name).inc()
+            HTTP_ENDPOINT_LATENCY_SECONDS.labels(endpoint_name=endpoint.name, status='failure').observe(time.time() - start_time)
             return False
-        finally:
-            latency = time.time() - start_time
-            HTTP_ENDPOINT_LATENCY_SECONDS.labels(endpoint_name=endpoint.name).observe(latency)
 
         HTTP_ENDPOINT_SUCCESS_TOTAL.labels(endpoint_name=endpoint.name).inc()
+        HTTP_ENDPOINT_LATENCY_SECONDS.labels(endpoint_name=endpoint.name, status='success').observe(response.elapsed.total_seconds())
         return True
