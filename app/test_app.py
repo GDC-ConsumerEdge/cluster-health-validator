@@ -4,12 +4,13 @@ from unittest.mock import MagicMock, patch
 from app import run_checks
 from config import Config
 
+@patch("app.config.load_config")
 class TestApp(unittest.TestCase):
 
     @patch('app.read_config')
     @patch('app.health_check_cr')
     @patch('app.health_check_map')
-    def test_run_checks_onfailure_ignore(self, mock_health_check_map, mock_health_check_cr, mock_read_config):
+    def test_run_checks_onfailure_ignore(self, mock_health_check_map, mock_health_check_cr, mock_read_config, mock_load_config):
         # Mock config
         mock_config = Config(
             platform_checks=[
@@ -53,7 +54,7 @@ class TestApp(unittest.TestCase):
     @patch('app.read_config')
     @patch('app.health_check_cr')
     @patch('app.health_check_map')
-    def test_run_checks_onfailure_fail(self, mock_health_check_map, mock_health_check_cr, mock_read_config):
+    def test_run_checks_onfailure_fail(self, mock_health_check_map, mock_health_check_cr, mock_read_config, mock_load_config):
         # Mock config
         mock_config = Config(
             platform_checks=[
@@ -87,7 +88,7 @@ class TestApp(unittest.TestCase):
     @patch('app.read_config')
     @patch('app.health_check_cr')
     @patch('app.health_check_map')
-    def test_run_checks_onfailure_default(self, mock_health_check_map, mock_health_check_cr, mock_read_config):
+    def test_run_checks_onfailure_default(self, mock_health_check_map, mock_health_check_cr, mock_read_config, mock_load_config):
         # Mock config
         mock_config = Config(
             platform_checks=[
