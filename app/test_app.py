@@ -1,23 +1,36 @@
 import unittest
-from config import Config
 from unittest.mock import MagicMock, patch
+import sys
+
+from prometheus_client import REGISTRY
+import app
 
 class TestApp(unittest.TestCase):
 
     def setUp(self):
-        self.load_config_patcher = patch('app.config.load_config')
+        self.load_config_patcher = patch('kubernetes.config.load_config')
         self.mock_load_config = self.load_config_patcher.start()
-        from app import run_checks
-        self.run_checks = run_checks
+        
+        # import app after patch
+        self.app = app
+
+        self.create_health_check_cr_patcher = patch('app.create_health_check_cr')
+        self.mock_create_health_check_cr = self.create_health_check_cr_patcher.start()
 
     def tearDown(self):
         self.load_config_patcher.stop()
+        self.create_health_check_cr_patcher.stop()
+        # Unregister metrics to prevent duplicate metric error
+        for metric in ['platform_health', 'workload_health']:
+            if metric in REGISTRY._names_to_collectors:
+                REGISTRY.unregister(REGISTRY._names_to_collectors[metric])
 
     @patch('app.read_config')
     @patch('app.health_check_cr')
     @patch('app.health_check_map')
     def test_run_checks_onfailure_ignore(self, mock_health_check_map, mock_health_check_cr, mock_read_config):
         # Mock config
+        from config import Config
         mock_config = Config(
             platform_checks=[
                 {
@@ -50,7 +63,7 @@ class TestApp(unittest.TestCase):
         }[key]
 
         # Run the checks
-        self.run_checks()
+        self.app.run_checks()
 
         # Assertions
         mock_health_check_cr.update_status.assert_called_once_with(
@@ -62,6 +75,7 @@ class TestApp(unittest.TestCase):
     @patch('app.health_check_map')
     def test_run_checks_onfailure_fail(self, mock_health_check_map, mock_health_check_cr, mock_read_config):
         # Mock config
+        from config import Config
         mock_config = Config(
             platform_checks=[
                 {
@@ -84,7 +98,7 @@ class TestApp(unittest.TestCase):
         }[key]
 
         # Run the checks
-        self.run_checks()
+        self.app.run_checks()
 
         # Assertions
         mock_health_check_cr.update_status.assert_called_once_with(
@@ -96,6 +110,7 @@ class TestApp(unittest.TestCase):
     @patch('app.health_check_map')
     def test_run_checks_onfailure_default(self, mock_health_check_map, mock_health_check_cr, mock_read_config):
         # Mock config
+        from config import Config
         mock_config = Config(
             platform_checks=[
                 {
@@ -117,7 +132,7 @@ class TestApp(unittest.TestCase):
         }[key]
 
         # Run the checks
-        self.run_checks()
+        self.app.run_checks()
 
         # Assertions
         mock_health_check_cr.update_status.assert_called_once_with(
