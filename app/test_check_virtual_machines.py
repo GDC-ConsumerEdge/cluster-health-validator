@@ -15,11 +15,23 @@ class TestCheckVirtualMachines(unittest.TestCase):
             self.mock_custom_objects_api
         )
 
+        # Patch the Prometheus counters
+        self.success_counter_patcher = patch(
+            "check_virtual_machines.VIRTUAL_MACHINE_SUCCESS_TOTAL"
+        )
+        self.mock_success_counter = self.success_counter_patcher.start()
+        self.failure_counter_patcher = patch(
+            "check_virtual_machines.VIRTUAL_MACHINE_FAILURE_TOTAL"
+        )
+        self.mock_failure_counter = self.failure_counter_patcher.start()
+
     def tearDown(self):
         self.k8s_client_patcher.stop()
+        self.success_counter_patcher.stop()
+        self.failure_counter_patcher.stop()
 
     def test_is_healthy_success(self):
-        """Test is_healthy returns True when all VMs are running and count matches."""
+        """Test is_healthy returns True and increments success counter when all VMs are running and count matches."""
         params = {"namespace": "test-ns", "count": 2}
         checker = CheckVirtualMachines(parameters=params)
 
@@ -40,17 +52,18 @@ class TestCheckVirtualMachines(unittest.TestCase):
         )
 
         self.assertTrue(checker.is_healthy())
-        
-
         self.mock_custom_objects_api.list_namespaced_custom_object.assert_called_once_with(
             group="vm.cluster.gke.io",
             version="v1",
             plural="virtualmachines",
             namespace="test-ns",
         )
+        self.mock_success_counter.labels.assert_called_once_with(namespace="test-ns")
+        self.mock_success_counter.labels.return_value.inc.assert_called_once()
+        self.mock_failure_counter.labels.assert_not_called()
 
     def test_is_healthy_incorrect_count(self):
-        """Test is_healthy returns False when the number of VMs does not match the expected count."""
+        """Test is_healthy returns False and increments failure counter when the number of VMs does not match the expected count."""
         params = {"namespace": "test-ns", "count": 3}
         checker = CheckVirtualMachines(parameters=params)
 
@@ -65,6 +78,9 @@ class TestCheckVirtualMachines(unittest.TestCase):
         )
 
         self.assertFalse(checker.is_healthy())
+        self.mock_failure_counter.labels.assert_called_once_with(namespace="test-ns")
+        self.mock_failure_counter.labels.return_value.inc.assert_called_once()
+        self.mock_success_counter.labels.assert_not_called()
 
     def test_is_healthy_vm_not_running(self):
         """Test is_healthy returns True when a VM is not in the 'Running' state."""
@@ -82,6 +98,9 @@ class TestCheckVirtualMachines(unittest.TestCase):
         )
 
         self.assertTrue(checker.is_healthy())
+        self.mock_success_counter.labels.assert_called_once_with(namespace="test-ns")
+        self.mock_success_counter.labels.return_value.inc.assert_called_once()
+        self.mock_failure_counter.labels.assert_not_called()
 
     def test_init_invalid_parameters(self):
         """Test that initializing with invalid parameters raises a ValidationError."""
@@ -100,7 +119,7 @@ class TestCheckVirtualMachines(unittest.TestCase):
         self.assertIsNone(check.count)
 
     def test_is_healthy_no_vms_expected(self):
-        """Test is_healthy returns True when no VMs are found and count is 0."""
+        """Test is_healthy returns True and increments success counter when no VMs are found and count is 0."""
         params = {"namespace": "test-ns", "count": 0}
         checker = CheckVirtualMachines(parameters=params)
 
@@ -110,3 +129,6 @@ class TestCheckVirtualMachines(unittest.TestCase):
         )
 
         self.assertTrue(checker.is_healthy())
+        self.mock_success_counter.labels.assert_called_once_with(namespace="test-ns")
+        self.mock_success_counter.labels.return_value.inc.assert_called_once()
+        self.mock_failure_counter.labels.assert_not_called()

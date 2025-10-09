@@ -12,7 +12,7 @@ requiring an in-cluster component.
 
 ## Installation
 
-This project uses a CRD and operator, and requires Cluster-Level access. The project can be deployed as a `RootSync` config-sync object with the following configuration. NOTE: Production use should clone the repo, make it private and use the `token` appraoch to authentiate to private repo.
+This project uses a CRD and operator, and requires Cluster-Level access. The project can be deployed as a `RootSync` config-sync object with the following configuration. NOTE: Production use should clone the repo, make it private and use the `token` approach to authenticate to private repo.
 
 ```yaml
 # root-sync.yaml
@@ -68,6 +68,15 @@ data:
       parameters:
         namespace: vm-workloads
         count: 4
+    - name: HTTP Endpoints
+      module: CheckHttpEndpoints
+      parameters:
+        endpoints:
+        - name: Google
+          url: https://www.google.com
+        - name: Kubernetes API
+          url: https://kubernetes.default.svc
+          timeout: 5
 ```
 
 Below details the health check modules available as part of the solution, with some requiring parameters:
@@ -80,7 +89,8 @@ Below details the health check modules available as part of the solution, with s
 | CheckRootSyncs       | Checks that RootSyncs are synced and have completed reconciling        |                                                                      |
 | CheckVMRuntime       | Checks that VMruntime is Ready, without any preflight failure          |                                                                      |
 | CheckVirtualMachines | Checks that the expected # of VMs are in a Running State               | **namespace**: namespace to run check against <br >   **count**: (Optional) expected # of VMs |
-| CheckDataVolumes     | Checks that the expected # of Data Volumes are 100% imported and ready | **namespace**: namespace to run check against <br >  **count**: (Optional) expected # of DVs |
+| CheckDataVolumes     | Checks that the expected # of Data Volumes are 100% imported and ready | **namespace**: namespace to run check against <br >   **count**: (Optional) expected # of DVs |
+| CheckHttpEndpoints   | Checks that a list of HTTP endpoints are reachable and return a successful status code | **endpoints**: A list of HTTP endpoints to check. Each endpoint has the following parameters: <ul><li> **name**: The name of the endpoint </li><li> **url**: The URL of the endpoint </li><li> **timeout**: (Optional) The timeout in seconds for the request </li><li> **method**: (Optional) The HTTP method to use (e.g. 'GET', 'POST') </li></ul> |
 
 
 ## Building the image

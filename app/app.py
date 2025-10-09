@@ -13,6 +13,7 @@ from check_root_syncs import CheckRootSyncs
 from check_virtual_machines import CheckVirtualMachines
 from check_virtual_machine_disks import CheckVirtualMachineDisks
 from check_vmruntime import CheckVMRuntime
+from check_http_endpoints import CheckHttpEndpoints
 from config import read_config
 from flask import Flask, abort
 from health_checks import HealthCheck
@@ -27,7 +28,7 @@ app = Flask(__name__)
 platform_health_metric = Gauge("platform_health", "Platform Checks")
 workload_health_metric = Gauge("workload_health", "Workload Checks")
 
-_MAX_WORKERS = os.environ.get("MAX_WORKERS", 10)
+_MAX_WORKERS = int(os.environ.get("MAX_WORKERS", 10))
 _ROBIN_MASTER_SVC_ENDPOINT = "robin-master.robinio.svc.cluster.local"
 _ROBIN_MASTER_SVC_METRICS_PORT = 29446
 
@@ -39,7 +40,8 @@ health_check_map = {
     CheckVMRuntime.__name__: CheckVMRuntime,
     CheckDataVolumes.__name__: CheckDataVolumes,
     CheckVirtualMachines.__name__: CheckVirtualMachines,
-    CheckVirtualMachineDisks.__name__: CheckVirtualMachineDisks
+    CheckVirtualMachineDisks.__name__: CheckVirtualMachineDisks,
+    CheckHttpEndpoints.__name__: CheckHttpEndpoints
 }
 
 
