@@ -11,6 +11,12 @@ class TestApp(unittest.TestCase):
         self.load_config_patcher = patch('kubernetes.config.load_config')
         self.mock_load_config = self.load_config_patcher.start()
         
+        self.apiextensions_v1_api_patcher = patch('kubernetes.client.ApiextensionsV1Api')
+        self.mock_apiextensions_v1_api = self.apiextensions_v1_api_patcher.start()
+
+        self.custom_objects_api_patcher = patch('kubernetes.client.CustomObjectsApi')
+        self.mock_custom_objects_api = self.custom_objects_api_patcher.start()
+
         # import app after patch
         self.app = app
 
@@ -19,6 +25,8 @@ class TestApp(unittest.TestCase):
 
     def tearDown(self):
         self.load_config_patcher.stop()
+        self.apiextensions_v1_api_patcher.stop()
+        self.custom_objects_api_patcher.stop()
         self.create_health_check_cr_patcher.stop()
         # Unregister metrics to prevent duplicate metric error
         for metric in ['platform_health', 'workload_health']:
