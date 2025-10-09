@@ -18,9 +18,9 @@ function display_common() {
 
 function build_container() {
   if [[ -f ".npmrc" ]]; then
-    docker build -f "${DOCKERFILE}" -t "${APP}:${VERSION}" . --secret id=npmrc,src=./.npmrc
+    docker build -f "${DOCKERFILE}" -t "${APP}:${VERSION}" .
   else
-    docker build -f "${DOCKERFILE}" -t "${APP}:${VERSION}" . --secret id=npmrc,src=./.npmrc
+    docker build -f "${DOCKERFILE}" -t "${APP}:${VERSION}" .
   fi
 
   if [[ $? -ne 0 ]]; then
