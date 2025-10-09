@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 import sys
 
 from prometheus_client import REGISTRY
-import app
 
 class TestApp(unittest.TestCase):
 
@@ -18,6 +17,7 @@ class TestApp(unittest.TestCase):
         self.mock_custom_objects_api = self.custom_objects_api_patcher.start()
 
         # import app after patch
+        import app
         self.app = app
 
         self.create_health_check_cr_patcher = patch('app.create_health_check_cr')
