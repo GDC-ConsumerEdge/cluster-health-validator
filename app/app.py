@@ -121,7 +121,7 @@ def run_checks():
             for future in concurrent.futures.as_completed(futures):
                 config = futures[future]
                 name = config["name"]
-                on_failure = config.get("onFailure", "fail")
+                on_failure = config.get("on_failure", "fail")
                 try:
                     if not future.result():
                         if on_failure == "fail":

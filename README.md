@@ -93,9 +93,9 @@ Below details the health check modules available as part of the solution, with s
 | CheckDataVolumes     | Checks that the expected # of Data Volumes are 100% imported and ready | **namespace**: namespace to run check against <br >   **count**: (Optional) expected # of DVs |
 | CheckHttpEndpoints   | Checks that a list of HTTP endpoints are reachable and return a successful status code | **endpoints**: A list of HTTP endpoints to check. Each endpoint has the following parameters: <ul><li> **name**: The name of the endpoint </li><li> **url**: The URL of the endpoint </li><li> **timeout**: (Optional) The timeout in seconds for the request </li><li> **method**: (Optional) The HTTP method to use (e.g. 'GET', 'POST') </li></ul> |
 
-### onFailure property
+### on_failure property
 
-Each health check module supports an `onFailure` property that allows you to control the behavior of the health check when it fails. The `onFailure` property can be set to one of two values:
+Each health check module supports an `on_failure` property that allows you to control the behavior of the health check when it fails. The `on_failure` property can be set to one of two values:
 
 - `fail` (default): If the health check fails, the entire group of checks (platform or workload) will be considered failed.
 - `ignore`: If the health check fails, the failure will be logged and tracked in metrics, but it will not affect the overall health status of the group.
@@ -110,17 +110,17 @@ platform_checks:
   module: CheckNodes
 - name: Robin Cluster Health
   module: CheckRobinCluster
-  onFailure: ignore
+  on_failure: ignore
 
 workload_checks:
 - name: VM Workloads Health
   module: CheckVirtualMachines
   parameters:
     namespace: vm-workloads
-  onFailure: fail
+  on_failure: fail
 - name: VM Disk Health
   module: CheckVirtualMachineDisks
-  onFailure: ignore
+  on_failure: ignore
 ```
 
 ## Building the image

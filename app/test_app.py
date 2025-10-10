@@ -44,12 +44,12 @@ class TestApp(unittest.TestCase):
                 {
                     "name": "CheckNodes",
                     "module": "CheckNodes",
-                    "onFailure": "ignore"
+                    "on_failure": "ignore"
                 },
                 {
                     "name": "CheckRobinCluster",
                     "module": "CheckRobinCluster",
-                    "onFailure": "fail"
+                    "on_failure": "fail"
                 }
             ],
             workload_checks=[]
@@ -89,7 +89,7 @@ class TestApp(unittest.TestCase):
                 {
                     "name": "CheckNodes",
                     "module": "CheckNodes",
-                    "onFailure": "fail"
+                    "on_failure": "fail"
                 }
             ],
             workload_checks=[]

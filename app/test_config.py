@@ -33,12 +33,12 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(len(result.platform_checks), 4)
         self.assertEqual(len(result.workload_checks), 2)
 
-    def test_onfailure_property(self):
+    def test_on_failure_property(self):
         os.environ["APP_CONFIG_PATH"] = "testdata/onfailure_config.yaml"
         result = read_config()
-        self.assertEqual(result.platform_checks[1]["onFailure"], "ignore")
-        self.assertEqual(result.workload_checks[0]["onFailure"], "fail")
-        self.assertEqual(result.workload_checks[1]["onFailure"], "ignore")
+        self.assertEqual(result.platform_checks[1]["on_failure"], "ignore")
+        self.assertEqual(result.workload_checks[0]["on_failure"], "fail")
+        self.assertEqual(result.workload_checks[1]["on_failure"], "ignore")
         # Check default value
-        self.assertNotIn("onFailure", result.platform_checks[0])
+        self.assertNotIn("on_failure", result.platform_checks[0])
 

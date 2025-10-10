@@ -3,14 +3,14 @@ platform_checks:
   module: CheckNodes
 - name: Robin Cluster Health
   module: CheckRobinCluster
-  onFailure: ignore
+  on_failure: ignore
 
 workload_checks:
 - name: VM Workloads Health
   module: CheckVirtualMachines
   parameters:
     namespace: vm-workloads
-  onFailure: fail
+  on_failure: fail
 - name: VM Disk Health
   module: CheckVirtualMachineDisks
-  onFailure: ignore
+  on_failure: ignore
