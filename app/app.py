@@ -83,53 +83,59 @@ def create_health_check_cr():
 
 
 def run_checks():
+    app_config = read_config()
     global health_check_cr
     if not health_check_cr:
         health_check_cr = HealthCheck()
 
-    platform_checks = []
-    workload_checks = []
-
-    app_config = read_config()
-
-    for check in app_config.platform_checks:
-        if "parameters" in check:
-            platform_checks.append(
-                health_check_map[check["module"]](check["parameters"])
-            )
+    platform_checks_with_configs = []
+    for check_config in app_config.platform_checks:
+        check_class = health_check_map[check_config["module"]]
+        if "parameters" in check_config:
+            instance = check_class(check_config["parameters"])
         else:
-            platform_checks.append(health_check_map[check["module"]]())
+            instance = check_class()
+        platform_checks_with_configs.append((instance, check_config))
 
-    for check in app_config.workload_checks:
-        if "parameters" in check:
-            workload_checks.append(
-                health_check_map[check["module"]](check["parameters"])
-            )
+    workload_checks_with_configs = []
+    for check_config in app_config.workload_checks:
+        check_class = health_check_map[check_config["module"]]
+        if "parameters" in check_config:
+            instance = check_class(check_config["parameters"])
         else:
-            workload_checks.append(health_check_map[check["module"]]())
+            instance = check_class()
+        workload_checks_with_configs.append((instance, check_config))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as executor:
         platform_checks_futures = {
-            executor.submit(check.is_healthy): check.__class__.__name__
-            for check in platform_checks
+            executor.submit(check.is_healthy): config
+            for check, config in platform_checks_with_configs
         }
         workload_checks_futures = {
-            executor.submit(check.is_healthy): check.__class__.__name__
-            for check in workload_checks
+            executor.submit(check.is_healthy): config
+            for check, config in workload_checks_with_configs
         }
 
         def wait_on_futures(futures):
             checks_failed = []
             for future in concurrent.futures.as_completed(futures):
-                name = futures[future]
+                config = futures[future]
+                name = config["name"]
+                on_failure = config.get("on_failure", "fail")
                 try:
                     if not future.result():
-                        checks_failed.append(name)
+                        if on_failure == "fail":
+                            checks_failed.append(name)
+                        else:
+                            logging.info(f"Check '{name}' failed but is set to be ignored.")
                 # Handling k8s resource not found here as it is not
                 # handled in the individual checks.
                 except ApiException as e:
                     if e.status == 404:
-                        checks_failed.append(name)
+                        if on_failure == "fail":
+                            checks_failed.append(name)
+                        else:
+                            logging.info(f"Check '{name}' failed with 404 but is set to be ignored.")
                     else:
                         raise
             return checks_failed

@@ -11,4 +11,4 @@ resources:
 
 images:
   - name: ghcr.io/gdc-consumeredge/cluster-health-validator/cluster-health-validator
-    newTag: "v1.2.0"
+    newTag: "v1.2.1"

@@ -26,6 +26,7 @@ class HealthCheck(TypedDict):
     name: str
     module: str
     parameters: NotRequired[dict] = {}
+    on_failure: NotRequired[str] = "fail"
 
 
 class Config(BaseModel):

@@ -1,0 +1,16 @@
+platform_checks:
+- name: Node Health
+  module: CheckNodes
+- name: Robin Cluster Health
+  module: CheckRobinCluster
+  on_failure: ignore
+
+workload_checks:
+- name: VM Workloads Health
+  module: CheckVirtualMachines
+  parameters:
+    namespace: vm-workloads
+  on_failure: fail
+- name: VM Disk Health
+  module: CheckVirtualMachineDisks
+  on_failure: ignore

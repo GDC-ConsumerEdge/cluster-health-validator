@@ -217,7 +217,7 @@ spec:
           value: INFO
         - name: APP_CONFIG_PATH
           value: /config/config.yaml
-        image: ghcr.io/gdc-consumeredge/cluster-health-validator/cluster-health-validator:v1.2.0
+        image: ghcr.io/gdc-consumeredge/cluster-health-validator/cluster-health-validator:v1.2.1
         livenessProbe:
           httpGet:
             path: /health

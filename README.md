@@ -41,6 +41,7 @@ spec:
 Cluster Health Validator allows customization for which platform and workload health checks are performed. This is specified as part of the ConfigMap as part of the deployment.
 
 ```
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -87,11 +88,40 @@ Below details the health check modules available as part of the solution, with s
 | CheckGoogleGroupRBAC | Checks that Google Group RBAC has been enabled                         |                                                                      |
 | CheckRobinCluster    | Checks RobinCluster Health                                             |                                                                      |
 | CheckRootSyncs       | Checks that RootSyncs are synced and have completed reconciling        |                                                                      |
-| CheckVMRuntime       | Checks that VMruntime is Ready, without any preflight failure          |                                                                      |
+| CheckVMRuntime       | Checks that VMRuntime is Ready, without any preflight failure          |                                                                      |
 | CheckVirtualMachines | Checks that the expected # of VMs are in a Running State               | **namespace**: namespace to run check against <br >   **count**: (Optional) expected # of VMs |
 | CheckDataVolumes     | Checks that the expected # of Data Volumes are 100% imported and ready | **namespace**: namespace to run check against <br >   **count**: (Optional) expected # of DVs |
 | CheckHttpEndpoints   | Checks that a list of HTTP endpoints are reachable and return a successful status code | **endpoints**: A list of HTTP endpoints to check. Each endpoint has the following parameters: <ul><li> **name**: The name of the endpoint </li><li> **url**: The URL of the endpoint </li><li> **timeout**: (Optional) The timeout in seconds for the request </li><li> **method**: (Optional) The HTTP method to use (e.g. 'GET', 'POST') </li></ul> |
 
+### on_failure property
+
+Each health check module supports an `on_failure` property that allows you to control the behavior of the health check when it fails. The `on_failure` property can be set to one of two values:
+
+- `fail` (default): If the health check fails, the entire group of checks (platform or workload) will be considered failed.
+- `ignore`: If the health check fails, the failure will be logged and tracked in metrics, but it will not affect the overall health status of the group.
+
+This is useful for non-critical health checks that you want to monitor but not have affect the overall health status.
+
+Example:
+
+```yaml
+platform_checks:
+- name: Node Health
+  module: CheckNodes
+- name: Robin Cluster Health
+  module: CheckRobinCluster
+  on_failure: ignore
+
+workload_checks:
+- name: VM Workloads Health
+  module: CheckVirtualMachines
+  parameters:
+    namespace: vm-workloads
+  on_failure: fail
+- name: VM Disk Health
+  module: CheckVirtualMachineDisks
+  on_failure: ignore
+```
 
 ## Building the image
 
