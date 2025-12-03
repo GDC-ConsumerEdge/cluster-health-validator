@@ -17,21 +17,28 @@ GOOGLE_GROUP_RBAC_FAILURE_TOTAL = Counter(
 
 class CheckGoogleGroupRBAC:
     def is_healthy(self):
-        k8s = client.CustomObjectsApi()
-        resp = k8s.list_namespaced_custom_object(
-            group="authentication.gke.io",
-            version="v2alpha1",
-            plural="clientconfigs",
-            namespace="kube-public",
-        )
+        try:
+            k8s = client.CustomObjectsApi()
+            resp = k8s.list_cluster_custom_object(
+                group="authentication.gke.io",
+                version="v2alpha1",
+                plural="clientconfigs",
+            )
+        except Exception as err:
+            log.error("An error occurred fetching the clientconfig %s", err)
+            GOOGLE_GROUP_RBAC_FAILURE_TOTAL.inc()
+            return False
 
         try:
             clientconfig = resp.get("items")[0]
 
-            if clientconfig.get("metadata").get("name") != "default":
-                log.error(
-                    "Did not find expected default.kube-public clientconfig object"
-                )
+            if clientconfig.get("metadata").get("name") != "default" and clientconfig.get("namespace") != "kube-public":
+                log.error("Did not find expected default.kube-public clientconfig object")
+                GOOGLE_GROUP_RBAC_FAILURE_TOTAL.inc()
+                return False
+
+            if clientconfig.get("spec").get("authentication") is None:
+                log.error("No authentication methods found in default.kube-public clientconfig object")
                 GOOGLE_GROUP_RBAC_FAILURE_TOTAL.inc()
                 return False
 
