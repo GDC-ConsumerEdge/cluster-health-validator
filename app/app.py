@@ -128,16 +128,18 @@ def run_checks():
                             checks_failed.append(name)
                         else:
                             logging.info(f"Check '{name}' failed but is set to be ignored.")
-                # Handling k8s resource not found here as it is not
-                # handled in the individual checks.
-                except ApiException as e:
-                    if e.status == 404:
+                except Exception as e:  # pylint: disable=broad-except
+                    if isinstance(e, ApiException) and e.status == 404:
                         if on_failure == "fail":
                             checks_failed.append(name)
                         else:
-                            logging.info(f"Check '{name}' failed with 404 but is set to be ignored.")
+                            logging.info(
+                                f"Check '{name}' failed with 404 but is set to be ignored."
+                            )
                     else:
-                        raise
+                        logging.error(f"Check '{name}' failed with exception: {e}", exc_info=True)
+                        if on_failure == "fail":
+                            checks_failed.append(name)
             return checks_failed
 
         platform_checks_failed = wait_on_futures(platform_checks_futures)
