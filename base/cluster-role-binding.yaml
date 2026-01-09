@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: cluster-health-validator
+  namespace: cluster-health
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -21,6 +22,9 @@ rules:
       - patch
       - update
       - watch
+  - apiGroups: ["authentication.gke.io"]
+    resources: ["clientconfigs"]
+    verbs: ["get", "list"]
   - apiGroups:
       - "*"
     resources:
@@ -38,4 +42,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: cluster-health-validator
-    namespace: default
+    namespace: cluster-health
