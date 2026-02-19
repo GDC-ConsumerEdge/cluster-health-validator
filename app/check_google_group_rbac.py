@@ -51,6 +51,6 @@ class CheckGoogleGroupRBAC:
         except Exception as err:
             log.error("An error occurred parsing the clientconfig %s", err)
 
-        log.info("Check GoogleGroupRBAC failed")
+        log.error("Check GoogleGroupRBAC failed")
         GOOGLE_GROUP_RBAC_FAILURE_TOTAL.inc()
         return False
