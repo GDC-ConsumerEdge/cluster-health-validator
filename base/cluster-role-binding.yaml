@@ -22,6 +22,9 @@ rules:
       - patch
       - update
       - watch
+  - apiGroups: ["authentication.gke.io"]
+    resources: ["clientconfigs"]
+    verbs: ["get", "list"]
   - apiGroups:
       - "*"
     resources:
